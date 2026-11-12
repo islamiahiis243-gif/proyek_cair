@@ -51,7 +51,7 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'verification',
-      label: 'Validasi Dokumen Digital',
+      label: 'Pemeriksaan Checksum Laporan',
       icon: QrCode,
       badge: null,
     },
