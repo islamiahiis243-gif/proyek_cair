@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ItemBarang, MutasiBarang, MutasiKas, DokumenLaporan, UserProfile, SupabaseConfig, AvailabilityStatus } from '../types';
+import { ItemBarang, MutasiBarang, MutasiKas, DokumenLaporan, UserProfile, SupabaseConfig, AvailabilityStatus, BoqSection } from '../types';
 import { getStoredConfig, getStoredUser, saveStoredUser, initiateGoogleSignIn, DEFAULT_USER, getSupabaseClient, signOutSupabase } from '../lib/supabase';
 
 interface AppContextType {
   items: ItemBarang[];
+  boqSections: BoqSection[];
   stockMutations: MutasiBarang[];
   cashMutations: MutasiKas[];
   documents: DokumenLaporan[];
@@ -44,6 +45,7 @@ export function computeItemStatus(stok:number,minStok:number,hasHistory=true):Av
 }
 export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
  const [items,setItems]=useState<ItemBarang[]>([]);
+ const [boqSections,setBoqSections]=useState<BoqSection[]>([]);
  const [stockMutations,setStockMutations]=useState<MutasiBarang[]>([]);
  const [cashMutations,setCashMutations]=useState<MutasiKas[]>([]);
  const [documents,setDocuments]=useState<DokumenLaporan[]>([]);
@@ -63,8 +65,9 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
  const refreshData=async()=>{
   const client=getSupabaseClient();
   const canReadCash=['admin','site_manager','finance','auditor'].includes(user.databaseRole||'');
-  const [boqRes,stockRes,cashRes,docsRes,additionsRes,reversalsRes]=await Promise.all([
+  const [boqRes,sectionsRes,stockRes,cashRes,docsRes,additionsRes,reversalsRes]=await Promise.all([
    client.from('boq_items').select('*').eq('is_active',true).order('source_row'),
+   client.from('boq_section_rollups').select('*').order('sort_order'),
    client.from('inventory_transactions').select('*').order('occurred_at',{ascending:true}).order('created_at',{ascending:true}),
    canReadCash?client.from('cash_transactions').select('*').order('occurred_at',{ascending:true}).order('created_at',{ascending:true}):Promise.resolve({data:[],error:null}),
    client.from('documents').select('*').order('created_at',{ascending:false}),
@@ -72,6 +75,7 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
    client.from('inventory_transaction_reversals').select('original_transaction_id')
   ]);
   if(boqRes.error)throw boqRes.error;
+  if(sectionsRes.error)throw sectionsRes.error;
   if(stockRes.error)throw stockRes.error;
   if(cashRes.error)throw cashRes.error;
   if(docsRes.error)throw docsRes.error;
@@ -93,7 +97,7 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
    if(!reversedIds.has(t.id)&&t.transaction_type==='KELUAR')consumed.set(ownerKey,(consumed.get(ownerKey)||0)+Number(t.quantity));
    return {id:t.id,barang_id:t.item_id,nama_barang:'',jenis:incoming?'MASUK':'KELUAR',jumlah:Number(t.quantity),satuan:t.uom,tujuan_keperluan:t.purpose||t.location||t.notes||'-',pic_penerima_penyerah:t.counterparty||'-',nomor_surat_jalan:t.reference_no||undefined,tanggal:t.occurred_at,stok_sebelum:before,stok_sesudah:after,catatan:t.notes||undefined,source_name:t.source_name||undefined,destination_name:t.destination_name||undefined,recipient_name:t.recipient_name||undefined,owner_type:t.owner_type||'KONTRAKTOR',purpose:t.purpose||undefined,addition_id:t.addition_id||undefined,created_by_name:t.created_by_name||t.created_by||'-'};
   });
-  const mappedItems:ItemBarang[]=(boqRes.data||[]).map((b:any)=>{const baseTarget=Number(b.quantity)||0;const additionalTarget=approvedAdds.get(b.id)||0;const target=baseTarget+additionalTarget;const ownerType=(b.remarks||'').toLowerCase().includes('by imk')?'IMK':'KONTRAKTOR';const ownerKey=`${b.id}:${ownerType}`;const masuk=received.get(ownerKey)||0;const keluar=consumed.get(ownerKey)||0;const progress=target>0?(masuk/target)*100:0;const statusPemenuhan:ItemBarang['status_pemenuhan']=masuk>target?'Melebihi BOQ':masuk>=target&&target>0?'Terpenuhi':masuk>0?'Dalam pemenuhan':'Belum dipenuhi';return {id:b.id,kode_boq:b.boq_code,source_sheet:b.source_sheet,source_row:b.source_row,nama_barang:b.description,kategori:b.category||'Tanpa kategori',qty_boq:baseTarget,qty_tambahan_disetujui:additionalTarget,target_kebutuhan_total:target,is_stock_item:Boolean(b.is_stock_item),has_stock_history:stockHistory.has(b.id),qty_masuk_total:masuk,qty_keluar_total:keluar,qty_pemenuhan_sisa:Math.max(target-masuk,0),progress_pemenuhan:progress,status_pemenuhan:statusPemenuhan,satuan:b.uom,harga_satuan:Number(b.unit_rate||0),stok_saat_ini:balance.get(ownerKey)||0,stok_minimum:0,status:computeItemStatus(balance.get(b.id)||0,0,stockHistory.has(b.id)),keterangan:b.remarks||''};});
+  const mappedItems:ItemBarang[]=(boqRes.data||[]).map((b:any)=>{const baseTarget=Number(b.quantity)||0;const additionalTarget=approvedAdds.get(b.id)||0;const target=baseTarget+additionalTarget;const ownerType=(b.remarks||'').toLowerCase().includes('by imk')?'IMK':'KONTRAKTOR';const ownerKey=`${b.id}:${ownerType}`;const masuk=received.get(ownerKey)||0;const keluar=consumed.get(ownerKey)||0;const progress=target>0?(masuk/target)*100:0;const statusPemenuhan:ItemBarang['status_pemenuhan']=masuk>target?'Melebihi BOQ':masuk>=target&&target>0?'Terpenuhi':masuk>0?'Dalam pemenuhan':'Belum dipenuhi';return {id:b.id,parent_section_id:b.parent_section_id||null,source_excel_row:b.source_excel_row??null,kode_boq:b.boq_code,source_sheet:b.source_sheet,source_row:b.source_row,nama_barang:b.description,kategori:b.category||'Tanpa kategori',qty_boq:baseTarget,qty_tambahan_disetujui:additionalTarget,target_kebutuhan_total:target,is_stock_item:Boolean(b.is_stock_item),has_stock_history:stockHistory.has(b.id),qty_masuk_total:masuk,qty_keluar_total:keluar,qty_pemenuhan_sisa:Math.max(target-masuk,0),progress_pemenuhan:progress,status_pemenuhan:statusPemenuhan,satuan:b.uom,harga_satuan:Number(b.unit_rate||0),stok_saat_ini:balance.get(ownerKey)||0,stok_minimum:0,status:computeItemStatus(balance.get(b.id)||0,0,stockHistory.has(b.id)),keterangan:b.remarks||''};});
   const nameById=new Map(mappedItems.map(x=>[x.id,x.nama_barang]));
   stockRows.forEach(x=>{x.nama_barang=nameById.get(x.barang_id)||'Item BOQ';});
   let cashBalance=0;
@@ -102,7 +106,7 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
    return {id:t.id,jenis:t.transaction_type,jumlah_rp:Number(t.amount),untuk_apa:t.description,kategori_keperluan:(t.category||'Lainnya') as MutasiKas['kategori_keperluan'],pic:t.pic||'-',nomor_kuitansi:t.reference_no||undefined,tanggal:t.occurred_at,saldo_setelah:cashBalance,catatan:t.notes||undefined};
   });
   const docs:DokumenLaporan[]=(docsRes.data||[]).map((d:any)=>({id:d.document_no,judul:d.title,jenis:d.document_type==='MUTASI_KAS'?'MUTASI_KAS':'MUTASI_STOK',status:d.status||'DRAFT',periode_awal:d.period_start||'',periode_akhir:d.period_end||'',dibuat_pada:d.created_at,penandatangan_nama:d.signer_name||'',penandatangan_jabatan:d.signer_role||'',penandatangan_email:d.signer_email||'',hash_keamanan:d.content_sha256||'',total_transaksi:Number(d.total_transactions||0),ringkasan_nilai_rp:Number(d.amount_summary||0),qr_payload:d.qr_payload||'',snapshot_json:d.snapshot?JSON.stringify(d.snapshot):undefined}));
-  setItems(mappedItems);setStockMutations(stockRows.reverse());setCashMutations(cashRows.reverse());setCashAccess(canReadCash);setDocuments(docs);setDataError(null);setDataReady(true);
+  setItems(mappedItems);setBoqSections((sectionsRes.data||[]) as BoqSection[]);setStockMutations(stockRows.reverse());setCashMutations(cashRows.reverse());setCashAccess(canReadCash);setDocuments(docs);setDataError(null);setDataReady(true);
  };
  useEffect(()=>{if(!user.id)return;let live=true;setDataReady(false);refreshData().catch((e:any)=>{if(live){setDataError(e.message||'Gagal memuat data dari Supabase.');setDataReady(true);}});return()=>{live=false;};},[user.id]);
  const addStockMutation=async(data:Omit<MutasiBarang,'id'|'stok_sebelum'|'stok_sesudah'>)=>{
@@ -126,6 +130,6 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
  const outOfStockCount=stockItems.filter(x=>x.has_stock_history&&x.stok_saat_ini<=0).length;
  const lowStockCount=stockItems.filter(x=>x.stok_saat_ini>0&&x.stok_saat_ini<=x.stok_minimum).length;
  const availableStockCount=stockItems.filter(x=>x.has_stock_history&&x.stok_saat_ini>x.stok_minimum).length;
- return <AppContext.Provider value={{items,stockMutations,cashMutations,documents,user,supabaseConfig,currentView,setCurrentView,verifyingDocId,setVerifyingDocId,addStockMutation,reverseStockMutation,addCashMutation,addDocument,logout,totalStockAssetValue,currentCashBalance,outOfStockCount,lowStockCount,availableStockCount,theme,toggleTheme,dataReady,dataError,cashAccess,cashWriteAccess,stockWriteAccess,cashHasEntries,recordedStockCount,unrecordedStockCount}}>{children}</AppContext.Provider>;
+ return <AppContext.Provider value={{items,boqSections,stockMutations,cashMutations,documents,user,supabaseConfig,currentView,setCurrentView,verifyingDocId,setVerifyingDocId,addStockMutation,reverseStockMutation,addCashMutation,addDocument,logout,totalStockAssetValue,currentCashBalance,outOfStockCount,lowStockCount,availableStockCount,theme,toggleTheme,dataReady,dataError,cashAccess,cashWriteAccess,stockWriteAccess,cashHasEntries,recordedStockCount,unrecordedStockCount}}>{children}</AppContext.Provider>;
 };
 export const useApp=()=>{const c=useContext(AppContext);if(!c)throw new Error('useApp must be used within AppProvider');return c;};
