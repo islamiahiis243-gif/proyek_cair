@@ -11,6 +11,11 @@ export interface ItemBarang {
   qty_boq: number;
   is_stock_item: boolean;
   has_stock_history: boolean;
+  qty_masuk_total: number;
+  qty_keluar_total: number;
+  qty_pemenuhan_sisa: number;
+  progress_pemenuhan: number;
+  status_pemenuhan: 'Belum dipenuhi' | 'Dalam pemenuhan' | 'Terpenuhi' | 'Melebihi BOQ';
   harga_satuan: number;
   stok_saat_ini: number;
   stok_minimum: number;
