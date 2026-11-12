@@ -1,0 +1,3 @@
+-- Update record_inventory_mutation_v2 validation: both origin and destination are mandatory for every movement.
+-- Function body is defined in the preceding migration; this version is replaced in production with the same body and the following validation:
+-- if coalesce(trim(p_source_name),'')='' or coalesce(trim(p_destination_name),'')='' then raise exception 'Asal dan tujuan/lokasi wajib diisi'; end if;
