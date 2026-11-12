@@ -73,15 +73,19 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
   if(cashRes.error)throw cashRes.error;
   if(docsRes.error)throw docsRes.error;
   const balance=new Map<string,number>();
+  const received=new Map<string,number>();
+  const consumed=new Map<string,number>();
   const stockHistory=new Set<string>((stockRes.data||[]).map((t:any)=>t.item_id));
   const stockRows:MutasiBarang[]=(stockRes.data||[]).map((t:any)=>{
    const before=balance.get(t.item_id)||0;
    const incoming=['MASUK','PENYESUAIAN_MASUK'].includes(t.transaction_type);
    const delta=incoming?Number(t.quantity):-Number(t.quantity);
    const after=before+delta;balance.set(t.item_id,after);
+   if(t.transaction_type==='MASUK')received.set(t.item_id,(received.get(t.item_id)||0)+Number(t.quantity));
+   if(t.transaction_type==='KELUAR')consumed.set(t.item_id,(consumed.get(t.item_id)||0)+Number(t.quantity));
    return {id:t.id,barang_id:t.item_id,nama_barang:'',jenis:incoming?'MASUK':'KELUAR',jumlah:Number(t.quantity),satuan:t.uom,tujuan_keperluan:t.location||t.notes||'-',pic_penerima_penyerah:t.counterparty||'-',nomor_surat_jalan:t.reference_no||undefined,tanggal:t.occurred_at,stok_sebelum:before,stok_sesudah:after,catatan:t.notes||undefined};
   });
-  const mappedItems:ItemBarang[]=(boqRes.data||[]).map((b:any)=>({id:b.id,kode_boq:b.boq_code,source_sheet:b.source_sheet,source_row:b.source_row,nama_barang:b.description,kategori:b.category||'Tanpa kategori',qty_boq:Number(b.quantity),is_stock_item:Boolean(b.is_stock_item),has_stock_history:stockHistory.has(b.id),satuan:b.uom,harga_satuan:Number(b.unit_rate||0),stok_saat_ini:balance.get(b.id)||0,stok_minimum:0,status:computeItemStatus(balance.get(b.id)||0,0,stockHistory.has(b.id)),keterangan:b.remarks||''}));
+  const mappedItems:ItemBarang[]=(boqRes.data||[]).map((b:any)=>{const target=Number(b.quantity)||0;const masuk=received.get(b.id)||0;const keluar=consumed.get(b.id)||0;const progress=target>0?(masuk/target)*100:0;const statusPemenuhan:ItemBarang['status_pemenuhan']=masuk>target?'Melebihi BOQ':masuk>=target&&target>0?'Terpenuhi':masuk>0?'Dalam pemenuhan':'Belum dipenuhi';return {id:b.id,kode_boq:b.boq_code,source_sheet:b.source_sheet,source_row:b.source_row,nama_barang:b.description,kategori:b.category||'Tanpa kategori',qty_boq:target,is_stock_item:Boolean(b.is_stock_item),has_stock_history:stockHistory.has(b.id),qty_masuk_total:masuk,qty_keluar_total:keluar,qty_pemenuhan_sisa:Math.max(target-masuk,0),progress_pemenuhan:progress,status_pemenuhan:statusPemenuhan,satuan:b.uom,harga_satuan:Number(b.unit_rate||0),stok_saat_ini:balance.get(b.id)||0,stok_minimum:0,status:computeItemStatus(balance.get(b.id)||0,0,stockHistory.has(b.id)),keterangan:b.remarks||''};});
   const nameById=new Map(mappedItems.map(x=>[x.id,x.nama_barang]));
   stockRows.forEach(x=>{x.nama_barang=nameById.get(x.barang_id)||'Item BOQ';});
   let cashBalance=0;
