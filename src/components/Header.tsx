@@ -15,8 +15,8 @@ export const Header: React.FC = () => {
           aria-label="Proyek Cair - Dashboard"
         >
           <img
-            src="/android-chrome-192x192.png"
-            alt="Logo Menara Megah"
+            src="/android-chrome-512x512.png"
+            alt="Logo Proyek Cair"
             className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-200"
           />
           <div>
@@ -63,7 +63,7 @@ export const Header: React.FC = () => {
           onClick={toggleTheme}
           title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
           aria-label={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
-          className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
         >
           {theme === 'dark' ? (
             <Sun className="w-4 h-4 text-amber-400 animate-in spin-in-90 duration-200" />
