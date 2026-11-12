@@ -3,6 +3,11 @@ import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import { DokumenLaporan, ItemBarang, MutasiBarang, MutasiKas, UserProfile } from '../types';
 
+function stableStringify(value:any):string {
+  if(Array.isArray(value)) return '['+value.map(stableStringify).join(',')+']';
+  if(value&&typeof value==='object') return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stableStringify(value[k])).join(',')+'}';
+  return JSON.stringify(value);
+}
 async function sha256Hex(value:string):Promise<string>{
   const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -78,7 +83,7 @@ export async function generateStockMutationPDF(params: {
   // Calculate stats
   const totalMasuk = mutations.filter((m) => m.jenis === 'MASUK').reduce((acc, m) => acc + m.jumlah, 0);
   const totalKeluar = mutations.filter((m) => m.jenis === 'KELUAR').reduce((acc, m) => acc + m.jumlah, 0);
-  const snapshot = JSON.stringify({document_type:'MUTASI_STOK',period_start:startDate,period_end:endDate,transactions:mutations.map(m=>({id:m.id,barang_id:m.barang_id,jenis:m.jenis,jumlah:m.jumlah,satuan:m.satuan,tujuan:m.tujuan_keperluan,pic:m.pic_penerima_penyerah,reference:m.nomor_surat_jalan||null,tanggal:m.tanggal,catatan:m.catatan||null}))});
+  const snapshot = stableStringify({document_type:'MUTASI_STOK',period_start:startDate,period_end:endDate,transactions:mutations.map(m=>({id:m.id,barang_id:m.barang_id,jenis:m.jenis,jumlah:m.jumlah,satuan:m.satuan,tujuan:m.tujuan_keperluan,pic:m.pic_penerima_penyerah,reference:m.nomor_surat_jalan||null,tanggal:m.tanggal,catatan:m.catatan||null}))});
   const hash = await sha256Hex(snapshot);
 
   // Header Bar
@@ -213,7 +218,7 @@ export async function generateStockMutationPDF(params: {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
   doc.text('Disusun Oleh,', 14, signY);
-  doc.text('Site Manager / Koordinator Lapangan', 14, signY + 4);
+  doc.text(signer.role, 14, signY + 4);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
@@ -450,7 +455,7 @@ export async function generateCashflowPDF(params: {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
   doc.text('Disusun Oleh,', 14, signY);
-  doc.text('Bendahara / Site Finance Proyek', 14, signY + 4);
+  doc.text(signer.role, 14, signY + 4);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
