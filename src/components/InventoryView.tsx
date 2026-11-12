@@ -142,14 +142,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
   return (
     <div className="space-y-5">
       {/* View Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
             Katalog & Stok Fisik Barang
           </h1>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Daftar master BOQ Kontraktor. Stok = 0 otomatis berstatus{' '}
-            <strong className="text-rose-600">Tidak Tersedia</strong>. Seluruh item By IMK telah diabaikan.
+            <strong className="text-rose-600 dark:text-rose-400">Tidak Tersedia</strong>. Seluruh item By IMK telah diabaikan.
           </p>
         </div>
 
@@ -163,27 +163,27 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 transition-colors">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Search Input */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Cari nama barang, no BOQ, atau kategori material..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             />
           </div>
 
           {/* Category Dropdown */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs text-slate-500 font-medium">Kategori:</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Kategori:</span>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             >
               <option value="ALL">Semua Kategori ({items.length})</option>
               {categories.map((c) => (
@@ -196,8 +196,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
-          <span className="text-xs text-slate-400 mr-1 font-medium">Filter Status:</span>
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <span className="text-xs text-slate-400 dark:text-slate-500 mr-1 font-medium">Filter Status:</span>
           {[
             { id: 'ALL', label: `Semua (${items.length})` },
             { id: 'Tersedia', label: `Tersedia (${items.filter((it) => it.status === 'Tersedia').length})` },
@@ -210,7 +210,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
                 selectedStatus === tab.id
                   ? 'bg-blue-600 text-white font-semibold shadow-sm'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               {tab.label}
@@ -220,11 +220,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
       </div>
 
       {/* Items Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+              <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-3.5 w-12 text-center">No</th>
                 <th className="py-3 px-3.5">Nama Material / Uraian BOQ</th>
                 <th className="py-3 px-3.5">Kategori</th>
@@ -235,10 +235,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
                 <th className="py-3 px-3.5 text-center">Aksi Cepat</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 dark:text-slate-500">
                     Tidak ada material yang sesuai kriteria pencarian.
                   </td>
                 </tr>
@@ -248,39 +248,39 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
                   return (
                     <tr
                       key={item.id}
-                      className={`hover:bg-slate-50/80 transition-colors ${
-                        isZero ? 'bg-rose-50/20' : ''
+                      className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${
+                        isZero ? 'bg-rose-50/20 dark:bg-rose-950/20' : ''
                       }`}
                     >
-                      <td className="py-3 px-3.5 text-center text-slate-400 font-mono text-[11px]">
+                      <td className="py-3 px-3.5 text-center text-slate-400 dark:text-slate-500 font-mono text-[11px]">
                         {idx + 1}
                       </td>
                       <td className="py-3 px-3.5">
-                        <div className="font-semibold text-slate-900">{item.nama_barang}</div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">
+                        <div className="font-semibold text-slate-900 dark:text-white">{item.nama_barang}</div>
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                           BOQ No: {item.kode_boq} {item.terakhir_mutasi && `· Mutasi: ${formatDateTime(item.terakhir_mutasi)}`}
                         </div>
                       </td>
-                      <td className="py-3 px-3.5 text-slate-600">
-                        <span className="text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                      <td className="py-3 px-3.5 text-slate-600 dark:text-slate-300">
+                        <span className="text-[11px] text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
                           {item.kategori}
                         </span>
                       </td>
-                      <td className="py-3 px-3.5 text-center font-mono text-slate-700">
+                      <td className="py-3 px-3.5 text-center font-mono text-slate-700 dark:text-slate-300">
                         {item.satuan}
                       </td>
-                      <td className="py-3 px-3.5 text-right font-mono tabular-nums text-slate-700">
+                      <td className="py-3 px-3.5 text-right font-mono tabular-nums text-slate-700 dark:text-slate-300">
                         {formatRupiah(item.harga_satuan)}
                       </td>
                       <td className="py-3 px-3.5 text-right font-mono font-bold tabular-nums">
                         <span
                           className={`text-sm ${
-                            isZero ? 'text-rose-600' : item.stok_saat_ini <= item.stok_minimum ? 'text-amber-600' : 'text-slate-900'
+                            isZero ? 'text-rose-600 dark:text-rose-400' : item.stok_saat_ini <= item.stok_minimum ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'
                           }`}
                         >
                           {item.stok_saat_ini.toLocaleString('id-ID')}
                         </span>{' '}
-                        <span className="text-[11px] text-slate-400 font-normal">{item.satuan}</span>
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 font-normal">{item.satuan}</span>
                       </td>
                       <td className="py-3 px-3.5 text-center">
                         {renderStatusBadge(item.status)}
@@ -290,7 +290,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
                           <button
                             onClick={() => onQuickMutate(item, 'MASUK')}
                             title="Tambah Stok Masuk"
-                            className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded border border-emerald-200 transition-colors"
+                            className="p-1.5 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded border border-emerald-200 dark:border-emerald-800 transition-colors"
                           >
                             <ArrowDownLeft className="w-3.5 h-3.5" />
                           </button>
@@ -300,8 +300,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
                             title={isZero ? 'Stok habis, tidak bisa keluar' : 'Catat Stok Keluar'}
                             className={`p-1.5 rounded border transition-colors ${
                               isZero
-                                ? 'text-slate-300 border-slate-200 cursor-not-allowed opacity-50'
-                                : 'text-rose-700 hover:bg-rose-50 border-rose-200'
+                                ? 'text-slate-300 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50'
+                                : 'text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 border-rose-200 dark:border-rose-800'
                             }`}
                           >
                             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -309,7 +309,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
                           <button
                             onClick={() => handleOpenEditModal(item)}
                             title="Ubah Rincian Item"
-                            className="p-1.5 text-slate-500 hover:bg-slate-100 rounded border border-slate-200 transition-colors"
+                            className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 transition-colors"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -323,7 +323,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
           </table>
         </div>
 
-        <div className="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
+        <div className="p-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
           <span>Menampilkan {filteredItems.length} dari total {items.length} item material</span>
           <span className="font-mono text-[11px]">BOQ Trainer & UDU Office Kontraktor</span>
         </div>
@@ -331,9 +331,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
 
       {/* Modal Add / Edit Item */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 transition-colors">
+            <div className="p-4 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
               <div className="font-bold text-sm">
                 {editingItem ? 'Ubah Rincian Material' : 'Tambah Material Baru ke Katalog'}
               </div>
@@ -347,7 +347,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
 
             <form onSubmit={handleSaveItem} className="p-5 space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Nama Barang / Material <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -356,28 +356,28 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
                   placeholder="Contoh: Semen Portland 50kg, Hollow Gypsum 4x4..."
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Nomor BOQ</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Nomor BOQ</label>
                   <input
                     type="text"
                     placeholder="Contoh: 1, 42, B-12"
                     value={formBoqNo}
                     onChange={(e) => setFormBoqNo(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Kategori</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Kategori</label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg"
                   >
                     <option value="Sipil & Adukan">Sipil & Adukan</option>
                     <option value="Kayu & Plywood">Kayu & Plywood</option>
@@ -398,42 +398,42 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Satuan (UOM)</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Satuan (UOM)</label>
                   <input
                     type="text"
                     required
                     placeholder="m3, kg, zak, box, ea..."
                     value={formUom}
                     onChange={(e) => setFormUom(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Harga Satuan (Rp)</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Harga Satuan (Rp)</label>
                   <input
                     type="number"
                     min="0"
                     value={formPrice}
                     onChange={(e) => setFormPrice(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Ambang Stok Menipis</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Ambang Stok Menipis</label>
                   <input
                     type="number"
                     min="1"
                     value={formMinStock}
                     onChange={(e) => setFormMinStock(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Stok Fisik Awal ({formUom})
                 </label>
                 <input
@@ -442,16 +442,16 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
                   step="any"
                   value={formStock}
                   onChange={(e) => setFormStock(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg font-mono"
                 />
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                   {formStock <= 0
                     ? 'Stok = 0 akan otomatis menghasilkan status "Tidak Tersedia".'
                     : `Status otomatis: ${formStock <= formMinStock ? 'Stok Menipis' : 'Tersedia'}`}
                 </p>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
                 {editingItem ? (
                   <button
                     type="button"
@@ -461,7 +461,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
                         setIsAddModalOpen(false);
                       }
                     }}
-                    className="px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors"
+                    className="px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg border border-rose-200 dark:border-rose-800 transition-colors"
                   >
                     Hapus Item
                   </button>
@@ -473,7 +473,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ onQuickMutate }) =
                   <button
                     type="button"
                     onClick={() => setIsAddModalOpen(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                   >
                     Batal
                   </button>

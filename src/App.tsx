@@ -39,7 +39,7 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors">
       <Header />
 
       <div className="flex-1 flex flex-col md:flex-row">
@@ -89,6 +89,7 @@ const MainApp: React.FC = () => {
           setIsModalOpen={setIsStockModalOpen}
           preselectedItem={preselectedStockItem}
           preselectedType={preselectedStockType}
+          modalOnly={true}
         />
       )}
 
@@ -97,6 +98,7 @@ const MainApp: React.FC = () => {
           isModalOpen={isCashModalOpen}
           setIsModalOpen={setIsCashModalOpen}
           defaultType={preselectedCashType}
+          modalOnly={true}
         />
       )}
     </div>

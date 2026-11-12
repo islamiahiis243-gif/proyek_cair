@@ -52,6 +52,8 @@ interface AppContextType {
   outOfStockCount: number;
   lowStockCount: number;
   availableStockCount: number;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -60,6 +62,7 @@ const STORAGE_KEY_ITEMS = 'proyek_cair_items';
 const STORAGE_KEY_STOCK_MUT = 'proyek_cair_stock_mutations';
 const STORAGE_KEY_CASH_MUT = 'proyek_cair_cash_mutations';
 const STORAGE_KEY_DOCS = 'proyek_cair_documents';
+const STORAGE_KEY_THEME = 'proyek_cair_theme';
 
 export function computeItemStatus(stok: number, minStok: number): AvailabilityStatus {
   if (stok <= 0) return 'Tidak Tersedia';
@@ -113,6 +116,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [supabaseConfig, setSupabaseConfigState] = useState<SupabaseConfig>(() => getStoredConfig());
   const [currentView, setCurrentView] = useState<string>('dashboard');
   const [verifyingDocId, setVerifyingDocId] = useState<string | null>(null);
+
+  // Theme state: dark / light
+  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_THEME);
+      if (saved === 'dark' || saved === 'light') return saved;
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch (e) {}
+    return 'light';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem(STORAGE_KEY_THEME, theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
 
   // Check URL query on load for document verification deep links (from QR code scans)
   useEffect(() => {
@@ -382,6 +410,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         outOfStockCount,
         lowStockCount,
         availableStockCount,
+        theme,
+        toggleTheme,
       }}
     >
       {children}

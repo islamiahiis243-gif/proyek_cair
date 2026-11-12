@@ -21,6 +21,7 @@ interface StockMutationViewProps {
   setIsModalOpen: (open: boolean) => void;
   preselectedItem: ItemBarang | null;
   preselectedType: JenisMutasiBarang;
+  modalOnly?: boolean;
 }
 
 export const StockMutationView: React.FC<StockMutationViewProps> = ({
@@ -28,6 +29,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
   setIsModalOpen,
   preselectedItem,
   preselectedType,
+  modalOnly = false,
 }) => {
   const { items, stockMutations, addStockMutation, user } = useApp();
 
@@ -127,15 +129,21 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
     setIsModalOpen(false);
   };
 
+  if (modalOnly && !isModalOpen) {
+    return null;
+  }
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
-            Mutasi Keluar / Masuk Stok Barang
-          </h1>
-          <p className="mt-1 text-xs text-slate-500">
+    <div className={modalOnly ? '' : 'space-y-5'}>
+      {!modalOnly && (
+        <>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Mutasi Keluar / Masuk Stok Barang
+              </h1>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Pencatatan real-time logistik. Setiap transaksi langsung memperbarui kuantitas dan status ketersediaan barang.
           </p>
         </div>
@@ -150,7 +158,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
           </button>
           <button
             onClick={() => handleOpenNewModal('KELUAR')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors border border-rose-200"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-lg transition-colors border border-rose-200 dark:border-rose-800"
           >
             <ArrowUpRight className="w-4 h-4" />
             <span>- Catat Keluar</span>
@@ -159,20 +167,20 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Cari transaksi mutasi, nama barang, keperluan, PIC, atau no surat jalan..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
           />
         </div>
 
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-400 mr-1 font-medium">Jenis:</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500 mr-1 font-medium">Jenis:</span>
           {[
             { id: 'ALL', label: `Semua (${stockMutations.length})` },
             { id: 'MASUK', label: `Masuk (${stockMutations.filter((m) => m.jenis === 'MASUK').length})` },
@@ -183,8 +191,8 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
               onClick={() => setFilterType(tab.id as any)}
               className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                 filterType === tab.id
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-slate-900 dark:bg-blue-600 text-white font-semibold'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               {tab.label}
@@ -194,11 +202,11 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
       </div>
 
       {/* Mutation Log Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+              <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-3.5 w-12 text-center">No</th>
                 <th className="py-3 px-3.5">Waktu Transaksi</th>
                 <th className="py-3 px-3.5 text-center">Jenis</th>
@@ -210,28 +218,28 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                 <th className="py-3 px-3.5 text-right">Perubahan Stok</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredMutations.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400 dark:text-slate-500">
                     Belum ada riwayat mutasi barang sesuai filter.
                   </td>
                 </tr>
               ) : (
                 filteredMutations.map((mut, idx) => (
-                  <tr key={mut.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-3.5 text-center text-slate-400 font-mono text-[11px]">
+                  <tr key={mut.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="py-3 px-3.5 text-center text-slate-400 dark:text-slate-500 font-mono text-[11px]">
                       {idx + 1}
                     </td>
-                    <td className="py-3 px-3.5 text-slate-600 font-mono text-[11px]">
+                    <td className="py-3 px-3.5 text-slate-600 dark:text-slate-400 font-mono text-[11px]">
                       {formatDateTime(mut.tanggal)}
                     </td>
                     <td className="py-3 px-3.5 text-center">
                       <span
                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded ${
                           mut.jenis === 'MASUK'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                            : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
                         }`}
                       >
                         {mut.jenis === 'MASUK' ? <ArrowDownLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
@@ -239,26 +247,26 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                       </span>
                     </td>
                     <td className="py-3 px-3.5">
-                      <div className="font-semibold text-slate-900">{mut.nama_barang}</div>
-                      {mut.catatan && <div className="text-[11px] text-slate-400 italic mt-0.5">{mut.catatan}</div>}
+                      <div className="font-semibold text-slate-900 dark:text-white">{mut.nama_barang}</div>
+                      {mut.catatan && <div className="text-[11px] text-slate-400 dark:text-slate-500 italic mt-0.5">{mut.catatan}</div>}
                     </td>
                     <td className="py-3 px-3.5 text-right font-mono font-bold tabular-nums">
-                      <span className={mut.jenis === 'MASUK' ? 'text-emerald-700' : 'text-rose-700'}>
+                      <span className={mut.jenis === 'MASUK' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}>
                         {mut.jenis === 'MASUK' ? '+' : '-'} {mut.jumlah.toLocaleString('id-ID')}
                       </span>{' '}
-                      <span className="text-[11px] text-slate-400 font-normal">{mut.satuan}</span>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-normal">{mut.satuan}</span>
                     </td>
-                    <td className="py-3 px-3.5 text-slate-700 max-w-xs truncate">
+                    <td className="py-3 px-3.5 text-slate-700 dark:text-slate-300 max-w-xs truncate">
                       {mut.tujuan_keperluan}
                     </td>
-                    <td className="py-3 px-3.5 text-slate-700">
+                    <td className="py-3 px-3.5 text-slate-700 dark:text-slate-300">
                       {mut.pic_penerima_penyerah}
                     </td>
-                    <td className="py-3 px-3.5 text-center font-mono text-[11px] text-slate-500">
+                    <td className="py-3 px-3.5 text-center font-mono text-[11px] text-slate-500 dark:text-slate-400">
                       {mut.nomor_surat_jalan || '-'}
                     </td>
-                    <td className="py-3 px-3.5 text-right font-mono text-[11px] tabular-nums text-slate-500">
-                      {mut.stok_sebelum} → <span className="font-bold text-slate-900">{mut.stok_sesudah}</span> {mut.satuan}
+                    <td className="py-3 px-3.5 text-right font-mono text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
+                      {mut.stok_sebelum} → <span className="font-bold text-slate-900 dark:text-white">{mut.stok_sesudah}</span> {mut.satuan}
                     </td>
                   </tr>
                 ))
@@ -267,12 +275,14 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
           </table>
         </div>
       </div>
+        </>
+      )}
 
       {/* Modal Record Stock Mutation */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 transition-colors">
+            <div className="p-4 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
               <div className="font-bold text-sm flex items-center gap-2">
                 {mutationType === 'MASUK' ? (
                   <>
@@ -296,21 +306,21 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
 
             <form onSubmit={handleSubmitMutation} className="p-5 space-y-4 text-xs">
               {errorMessage && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 flex items-start gap-2">
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg text-rose-700 dark:text-rose-300 flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>{errorMessage}</span>
                 </div>
               )}
 
               {/* Mode Toggle */}
-              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg">
+              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
                 <button
                   type="button"
                   onClick={() => setMutationType('MASUK')}
                   className={`py-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1.5 ${
                     mutationType === 'MASUK'
                       ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <ArrowDownLeft className="w-3.5 h-3.5" />
@@ -322,7 +332,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                   className={`py-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1.5 ${
                     mutationType === 'KELUAR'
                       ? 'bg-rose-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <ArrowUpRight className="w-3.5 h-3.5" />
@@ -332,13 +342,13 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
 
               {/* Select Item */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Pilih Material dari Katalog BOQ <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={selectedItemId}
                   onChange={(e) => setSelectedItemId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
                 >
                   {items.map((it) => (
                     <option key={it.id} value={it.id}>
@@ -351,7 +361,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
               {/* Quantity and Preview */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Jumlah ({currentSelectedItem?.satuan || 'unit'}) <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -361,26 +371,26 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                     required
                     value={qty}
                     onChange={(e) => setQty(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono font-bold text-sm"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg font-mono font-bold text-sm"
                   />
                 </div>
 
-                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex flex-col justify-center">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col justify-center">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider font-semibold">
                     Proyeksi Sisa Stok
                   </span>
-                  <div className="text-xs font-bold text-slate-900 mt-0.5 font-mono">
-                    {currentStock} → <span className={mutationType === 'MASUK' ? 'text-emerald-600' : 'text-rose-600'}>{projectedStock}</span> {currentSelectedItem?.satuan}
+                  <div className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 font-mono">
+                    {currentStock} → <span className={mutationType === 'MASUK' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>{projectedStock}</span> {currentSelectedItem?.satuan}
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">
-                    Status baru: <strong className={projectedStatus === 'Tidak Tersedia' ? 'text-rose-600' : 'text-emerald-600'}>{projectedStatus}</strong>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Status baru: <strong className={projectedStatus === 'Tidak Tersedia' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>{projectedStatus}</strong>
                   </div>
                 </div>
               </div>
 
               {/* Purpose */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Tujuan & Keperluan Pemakaian <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -389,51 +399,51 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                   placeholder="Contoh: Pengecoran sloof kolom zona A, Pemasangan dinding container..."
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
 
               {/* PIC & Surat Jalan */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">PIC / Penerima</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">PIC / Penerima</label>
                   <input
                     type="text"
                     value={pic}
                     onChange={(e) => setPic(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">No. Surat Jalan / Bon</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">No. Surat Jalan / Bon</label>
                   <input
                     type="text"
                     placeholder="SJ-001 / BON-12"
                     value={suratJalan}
                     onChange={(e) => setSuratJalan(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg"
                   />
                 </div>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Catatan Tambahan (Opsional)</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan Tambahan (Opsional)</label>
                 <input
                   type="text"
                   placeholder="Kondisi barang, suplier, atau nama supir..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                 >
                   Batal
                 </button>
