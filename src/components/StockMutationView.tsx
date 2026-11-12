@@ -89,7 +89,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSubmitMutation = (e: React.FormEvent) => {
+  const handleSubmitMutation = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -108,7 +108,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
       return;
     }
 
-    const res = addStockMutation({
+    const res = await addStockMutation({
       barang_id: currentSelectedItem.id,
       nama_barang: currentSelectedItem.nama_barang,
       jenis: mutationType,
