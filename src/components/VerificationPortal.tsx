@@ -33,6 +33,7 @@ export const VerificationPortal: React.FC = () => {
   useEffect(() => {
     let active=true;
     const verify=async()=>{
+      setIntegrityStatus('checking');
       if(!currentDoc?.snapshot_json||!currentDoc.hash_keamanan){setIntegrityStatus('unavailable');return;}
       try{
         const parsed=JSON.parse(currentDoc.snapshot_json);
