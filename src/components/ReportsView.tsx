@@ -22,7 +22,7 @@ import {
 } from '../lib/pdfGenerator';
 
 export const ReportsView: React.FC = () => {
-  const { stockMutations, cashMutations, documents, addDocument, user, setVerifyingDocId, setCurrentView } = useApp();
+  const { stockMutations, cashMutations, documents, addDocument, user, cashAccess, setVerifyingDocId, setCurrentView } = useApp();
 
   const [reportType, setReportType] = useState<'stock' | 'cash'>('stock');
   const [startDate, setStartDate] = useState<string>(() => {
@@ -45,6 +45,7 @@ export const ReportsView: React.FC = () => {
       const docId = `DOC-PC-${dateTag}-${String(docCounter).padStart(3, '0')}`;
 
 
+      if (reportType === 'cash' && !cashAccess) throw new Error('Role akun ini tidak memiliki akses ke data kas.');
       if (reportType === 'stock') {
         const filtered = stockMutations.filter((m) => {
           const dateOnly = m.tanggal.split('T')[0];
