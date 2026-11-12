@@ -99,6 +99,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>- Stok Keluar</span>
           </button>
 
+          {cashAccess && <>
           <button
             onClick={() => onOpenCashModal('MASUK')}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800"
@@ -114,6 +115,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <ArrowUpRight className="w-3.5 h-3.5" />
             <span>- Kas Keluar</span>
           </button>
+          </>}
         </div>
       </div>
 
@@ -126,7 +128,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               Otomasi Status Stok Aktif: {outOfStockCount} item berstatus "Tidak Tersedia" (stok = 0).
             </span>{' '}
             <span className="text-amber-800 dark:text-amber-300/80">
-              Item master BOQ diinisialisasi pada kuantitas 0. Saat barang diterima di lokasi proyek via menu{' '}
+              Saldo fisik saat ini dihitung dari ledger mutasi, bukan dari Qty BOQ. Saat barang benar-benar diterima di lokasi proyek via menu{' '}
               <strong className="underline cursor-pointer" onClick={() => onOpenStockModal('MASUK')}>
                 Mutasi Masuk
               </strong>
