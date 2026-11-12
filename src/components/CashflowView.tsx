@@ -40,7 +40,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
   const [amount, setAmount] = useState<number>(0);
   const [purpose, setPurpose] = useState('');
   const [category, setCategory] = useState<MutasiKas['kategori_keperluan']>('Material');
-  const [pic, setPic] = useState(user.name || 'Bendahara Lapangan');
+  const [pic, setPic] = useState(user.name);
   const [receipt, setReceipt] = useState('');
   const [notes, setNotes] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -87,7 +87,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSubmitCash = (e: React.FormEvent) => {
+  const handleSubmitCash = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -101,7 +101,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
       return;
     }
 
-    const res = addCashMutation({
+    const res = await addCashMutation({
       jenis,
       jumlah_rp: Number(amount),
       untuk_apa: purpose.trim(),
