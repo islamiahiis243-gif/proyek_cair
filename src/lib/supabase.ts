@@ -2,6 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseConfig, UserProfile } from '../types';
 
 const STORAGE_KEY_USER = 'proyek_cair_user';
+export const DEFAULT_USER: UserProfile = { id:'', name:'Pengguna', email:'', role:'Mandor Lapangan', provider:'guest' };
 const env = (import.meta as any).env || {};
 const SUPABASE_URL = env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_KEY = env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -47,7 +48,7 @@ export async function signOutSupabase(): Promise<void> {
   if (error) throw error;
   localStorage.removeItem(STORAGE_KEY_USER);
 }
-export async function testSupabaseConnection(): Promise<{success:boolean;message:string}> {
+export async function testSupabaseConnection(_url?: string, _anonKey?: string): Promise<{success:boolean;message:string}> {
   try {
     const { error } = await getSupabaseClient().from('boq_items').select('id').limit(1);
     if (error) return { success:false, message:error.message };
