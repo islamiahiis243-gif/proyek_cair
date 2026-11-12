@@ -104,5 +104,5 @@ export interface SupabaseConfig {
 }
 
 export interface BoqSection {
-  id:string; source_sheet:string; source_row:number; node_code:string; description:string; level:1|2|3; parent_id:string|null; sort_order:number; source_color:string; source_qty:number|null; source_uom:string|null; source_total_price:number|null; calculated_total_price:number; quantities_by_uom:Record<string,number>; item_count:number; source_total_variance:number;
+  id:string; source_sheet:string; source_row:number; node_code:string; description:string; level:1|2|3; parent_id:string|null; sort_order:number; source_color:string; source_qty:number|null; source_uom:string|null; source_total_price:number|null; calculated_total_price:number; quantities_by_uom:Record<string,number>; item_count:number; source_total_variance:number; imk_total_price?:number;
 }
