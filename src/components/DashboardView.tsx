@@ -56,7 +56,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     .filter((m) => m.jenis === 'KELUAR')
     .reduce((sum, m) => sum + m.jumlah, 0);
 
-  const totalItemCount = items.length;
+  const totalItemCount = items.filter((item) => item.is_stock_item).length;
   const availablePercent = totalItemCount > 0 ? Math.round((availableStockCount / totalItemCount) * 100) : 0;
   const lowPercent = totalItemCount > 0 ? Math.round((lowStockCount / totalItemCount) * 100) : 0;
   const outPercent = totalItemCount > 0 ? Math.round((outOfStockCount / totalItemCount) * 100) : 0;
