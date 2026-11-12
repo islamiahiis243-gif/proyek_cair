@@ -21,6 +21,8 @@ import {
   saveStoredUser,
   initiateGoogleSignIn,
   DEFAULT_USER,
+  getSupabaseClient,
+  signOutSupabase,
 } from '../lib/supabase';
 
 interface AppContextType {
@@ -35,7 +37,7 @@ interface AppContextType {
   verifyingDocId: string | null;
   setVerifyingDocId: (id: string | null) => void;
   // Actions
-  addStockMutation: (mutation: Omit<MutasiBarang, 'id' | 'stok_sebelum' | 'stok_sesudah'>) => { success: boolean; message: string };
+  addStockMutation: (mutation: Omit<MutasiBarang, 'id' | 'stok_sebelum' | 'stok_sesudah'>) => Promise<{ success: boolean; message: string }>;
   addCashMutation: (cash: Omit<MutasiKas, 'id' | 'saldo_setelah'>) => { success: boolean; message: string };
   addItem: (item: Omit<ItemBarang, 'id' | 'status'>) => void;
   updateItem: (id: string, updates: Partial<ItemBarang>) => void;
@@ -72,45 +74,10 @@ export function computeItemStatus(stok: number, minStok: number): AvailabilitySt
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load initial state with localStorage fallbacks
-  const [items, setItems] = useState<ItemBarang[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_ITEMS);
-      if (raw) return JSON.parse(raw);
-    } catch (e) {
-      console.warn('Error reading stored items', e);
-    }
-    return INITIAL_ITEMS;
-  });
-
-  const [stockMutations, setStockMutations] = useState<MutasiBarang[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_STOCK_MUT);
-      if (raw) return JSON.parse(raw);
-    } catch (e) {
-      console.warn('Error reading stored stock mutations', e);
-    }
-    return INITIAL_STOCK_MUTATIONS;
-  });
-
-  const [cashMutations, setCashMutations] = useState<MutasiKas[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_CASH_MUT);
-      if (raw) return JSON.parse(raw);
-    } catch (e) {
-      console.warn('Error reading stored cash mutations', e);
-    }
-    return INITIAL_CASH_MUTATIONS;
-  });
-
-  const [documents, setDocuments] = useState<DokumenLaporan[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_DOCS);
-      if (raw) return JSON.parse(raw);
-    } catch (e) {
-      console.warn('Error reading stored documents', e);
-    }
-    return INITIAL_DOCUMENTS;
-  });
+  const [items, setItems] = useState<ItemBarang[]>([]);
+  const [stockMutations, setStockMutations] = useState<MutasiBarang[]>([]);
+  const [cashMutations, setCashMutations] = useState<MutasiKas[]>([]);
+  const [documents, setDocuments] = useState<DokumenLaporan[]>([]);
 
   const [user, setUser] = useState<UserProfile>(() => getStoredUser());
   const [supabaseConfig, setSupabaseConfigState] = useState<SupabaseConfig>(() => getStoredConfig());
@@ -152,22 +119,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // Sync to local storage whenever state changes
+  // Supabase is the operational source of truth. BOQ quantities are references; stock is ledger-derived.
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(items));
-  }, [items]);
+    if (!user.id) return;
+    let active = true;
+    const load = async () => {
+      try {
+        const client = getSupabaseClient();
+        const [{ data: boq, error: boqError }, { data: tx, error: txError }] = await Promise.all([
+          client.from('boq_items').select('*').eq('is_active', true).order('source_row'),
+          client.from('inventory_transactions').select('*').order('occurred_at', { ascending: false })
+        ]);
+        if (boqError) throw boqError;
+        if (txError) throw txError;
+        if (!active) return;
+        const balances = new Map<string, number>();
+        const mutations: MutasiBarang[] = (tx || []).map((t: any) => {
+          const delta = ['MASUK','PENYESUAIAN_MASUK'].includes(t.transaction_type) ? Number(t.quantity) : -Number(t.quantity);
+          balances.set(t.item_id, (balances.get(t.item_id) || 0) + delta);
+          return { id:t.id, barang_id:t.item_id, nama_barang:'', jenis:t.transaction_type.includes('MASUK')?'MASUK':'KELUAR', jumlah:Number(t.quantity), satuan:t.uom, tujuan_keperluan:t.location || t.notes || '-', pic_penerima_penyerah:t.counterparty || '-', nomor_surat_jalan:t.reference_no || undefined, tanggal:t.occurred_at, stok_sebelum:0, stok_sesudah:0, catatan:t.notes || undefined };
+        });
+        const mapped: ItemBarang[] = (boq || []).map((b: any) => ({ id:b.id, kode_boq:b.boq_code, source_sheet:b.source_sheet, source_row:b.source_row, nama_barang:b.description, kategori:b.category || 'BOQ', satuan:b.uom, harga_satuan:Number(b.unit_rate || 0), stok_saat_ini:balances.get(b.id) || 0, stok_minimum:0, status:computeItemStatus(balances.get(b.id)||0,0), keterangan:b.remarks || '' }));
+        const names = new Map(mapped.map(x=>[x.id,x.nama_barang]));
+        mutations.forEach(m=>{m.nama_barang=names.get(m.barang_id)||'Item BOQ';});
+        setItems(mapped);
+        setStockMutations(mutations);
+      } catch (error) { console.error('Gagal memuat data UDU dari Supabase:', error); }
+    };
+    void load();
+    return () => { active = false; };
+  }, [user.id]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_STOCK_MUT, JSON.stringify(stockMutations));
-  }, [stockMutations]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_CASH_MUT, JSON.stringify(cashMutations));
-  }, [cashMutations]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_DOCS, JSON.stringify(documents));
-  }, [documents]);
 
   // Calculated Stats
   const totalStockAssetValue = items.reduce((acc, it) => acc + it.stok_saat_ini * it.harga_satuan, 0);
@@ -181,61 +164,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const availableStockCount = items.filter((it) => it.stok_saat_ini > it.stok_minimum).length;
 
   // Add Stock Mutation
-  const addStockMutation = (
+  const addStockMutation = async (
     data: Omit<MutasiBarang, 'id' | 'stok_sebelum' | 'stok_sesudah'>
-  ): { success: boolean; message: string } => {
-    const itemIndex = items.findIndex((it) => it.id === data.barang_id);
-    if (itemIndex === -1) {
-      return { success: false, message: 'Item barang tidak ditemukan!' };
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      const client = getSupabaseClient();
+      const { error } = await client.rpc('record_inventory_mutation', {
+        p_idempotency_key: crypto.randomUUID(),
+        p_item_id: data.barang_id,
+        p_type: data.jenis,
+        p_quantity: data.jumlah,
+        p_occurred_at: data.tanggal || new Date().toISOString(),
+        p_reference_no: data.nomor_surat_jalan || null,
+        p_counterparty: data.pic_penerima_penyerah || null,
+        p_location: data.tujuan_keperluan || null,
+        p_notes: data.catatan || null
+      });
+      if (error) throw error;
+      const [{data:boq,error:boqError},{data:tx,error:txError}] = await Promise.all([
+        client.from('boq_items').select('*').eq('is_active',true).order('source_row'),
+        client.from('inventory_transactions').select('*').order('occurred_at',{ascending:false})
+      ]);
+      if (boqError) throw boqError;
+      if (txError) throw txError;
+      const balances = new Map<string,number>();
+      (tx||[]).forEach((t:any)=>balances.set(t.item_id,(balances.get(t.item_id)||0)+(['MASUK','PENYESUAIAN_MASUK'].includes(t.transaction_type)?Number(t.quantity):-Number(t.quantity))));
+      setItems((boq||[]).map((x:any)=>({id:x.id,kode_boq:x.boq_code,source_sheet:x.source_sheet,source_row:x.source_row,nama_barang:x.description,kategori:x.category||'BOQ',satuan:x.uom,harga_satuan:Number(x.unit_rate||0),stok_saat_ini:balances.get(x.id)||0,stok_minimum:0,status:computeItemStatus(balances.get(x.id)||0,0),keterangan:x.remarks||''})));
+      setStockMutations((tx||[]).map((t:any)=>({id:t.id,barang_id:t.item_id,nama_barang:(boq||[]).find((x:any)=>x.id===t.item_id)?.description||'Item BOQ',jenis:t.transaction_type.includes('MASUK')?'MASUK':'KELUAR',jumlah:Number(t.quantity),satuan:t.uom,tujuan_keperluan:t.location||t.notes||'-',pic_penerima_penyerah:t.counterparty||'-',nomor_surat_jalan:t.reference_no||undefined,tanggal:t.occurred_at,stok_sebelum:0,stok_sesudah:0,catatan:t.notes||undefined})));
+      return { success:true, message:'Mutasi berhasil disimpan di database UDU.' };
+    } catch (error:any) {
+      return { success:false, message:error.message || 'Gagal menyimpan mutasi ke Supabase.' };
     }
-
-    const currentItem = items[itemIndex];
-    const stokSebelum = currentItem.stok_saat_ini;
-
-    if (data.jenis === 'KELUAR' && stokSebelum < data.jumlah) {
-      return {
-        success: false,
-        message: `Stok tidak mencukupi! Sisa stok saat ini: ${stokSebelum} ${currentItem.satuan}, diminta: ${data.jumlah} ${currentItem.satuan}`,
-      };
-    }
-
-    const delta = data.jenis === 'MASUK' ? data.jumlah : -data.jumlah;
-    const stokSesudah = Math.max(0, stokSebelum + delta);
-    const newStatus = computeItemStatus(stokSesudah, currentItem.stok_minimum);
-
-    // Update item
-    const updatedItems = [...items];
-    updatedItems[itemIndex] = {
-      ...currentItem,
-      stok_saat_ini: stokSesudah,
-      status: newStatus,
-      terakhir_mutasi: data.tanggal || new Date().toISOString(),
-    };
-    setItems(updatedItems);
-
-    // Create record
-    const newMutation: MutasiBarang = {
-      id: 'MUT-STK-' + Date.now().toString(36).toUpperCase(),
-      barang_id: data.barang_id,
-      nama_barang: currentItem.nama_barang,
-      jenis: data.jenis,
-      jumlah: data.jumlah,
-      satuan: currentItem.satuan,
-      tujuan_keperluan: data.tujuan_keperluan,
-      pic_penerima_penyerah: data.pic_penerima_penyerah,
-      nomor_surat_jalan: data.nomor_surat_jalan,
-      tanggal: data.tanggal || new Date().toISOString(),
-      stok_sebelum: stokSebelum,
-      stok_sesudah: stokSesudah,
-      catatan: data.catatan,
-    };
-
-    setStockMutations((prev) => [newMutation, ...prev]);
-
-    return {
-      success: true,
-      message: `Mutasi ${data.jenis === 'MASUK' ? 'Masuk' : 'Keluar'} berhasil dicatat. Stok ${currentItem.nama_barang} kini: ${stokSesudah} ${currentItem.satuan} (${newStatus})`,
-    };
   };
 
   // Add Cash Mutation (Kas Terpisah: In / Out / Untuk Apa / Saldo)
@@ -364,15 +323,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Google Login
-  const loginGoogle = async () => {
-    const loggedInUser = await initiateGoogleSignIn();
-    setUser(loggedInUser);
-  };
+  const loginGoogle = async () => { await initiateGoogleSignIn(); };
 
   // Logout
-  const logout = () => {
-    setUser(DEFAULT_USER);
-    saveStoredUser(DEFAULT_USER);
+  const logout = async () => {
+    try { await signOutSupabase(); } finally { setUser({ ...DEFAULT_USER, id: '', email: '' }); }
   };
 
   // Save Supabase Config
