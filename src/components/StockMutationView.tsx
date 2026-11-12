@@ -144,7 +144,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                 Mutasi Keluar / Masuk Stok Barang
               </h1>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Pencatatan real-time logistik. Setiap transaksi langsung memperbarui kuantitas dan status ketersediaan barang.
+            Setiap mutasi disimpan ke Supabase. Saldo fisik dihitung dari ledger transaksi; Qty BOQ tetap sebagai acuan kontrak.
           </p>
         </div>
 
