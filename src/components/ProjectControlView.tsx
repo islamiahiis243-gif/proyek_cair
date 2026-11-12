@@ -17,8 +17,8 @@ export const ProjectControlView:React.FC=()=>{
  const [audit,setAudit]=useState<any[]>([]);
  const [selected,setSelected]=useState('');
  const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [notice,setNotice]=useState('');
- const [form,setForm]=useState({need_start_date:'',target_receipt_date:'',target_use_start_date:'',target_use_end_date:'',notes:''});
- const [addition,setAddition]=useState({item_id:'',description:'',quantity:'',uom:'',unit_rate:'',requester_type:'CLIENT',reason:'',requested_by_name:user.name,approval_reference:'',notes:''});
+ const [form,setForm]=useState({need_start_date:'',target_receipt_date:'',target_use_start_date:'',target_use_end_date:'',notes:'',is_stock_item:true,owner_type:'KONTRAKTOR'});
+ const [addition,setAddition]=useState({item_id:'',description:'',quantity:'',uom:'',unit_rate:'',requester_type:'CLIENT',reason:'',requested_by_name:user.name,approval_reference:'',notes:'',is_stock_item:true,owner_type:'KONTRAKTOR'});
  const canManage=['admin','site_manager'].includes(user.databaseRole||'');
  const load=async()=>{
   setError(''); const [p,s,a]=await Promise.all([
@@ -46,9 +46,10 @@ export const ProjectControlView:React.FC=()=>{
  };
  const addVariation=async(e:React.FormEvent)=>{
   e.preventDefault();setBusy(true);setError('');setNotice('');
-  const item=items.find(x=>x.id===addition.item_id);
+  let item=items.find(x=>x.id===addition.item_id);
   const code='ADD-'+new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14)+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
-  const {error}=await db.from('boq_additions').insert({addition_code:code,item_id:addition.item_id||null,description:addition.description||item?.nama_barang,quantity:Number(addition.quantity),uom:addition.uom||item?.satuan,unit_rate:Number(addition.unit_rate||item?.harga_satuan||0),requester_type:addition.requester_type,chargeable_to_client:addition.requester_type==='CLIENT',reason:addition.reason,requested_by_name:addition.requested_by_name,approval_reference:addition.approval_reference||null,notes:addition.notes||null,created_by:user.id,billing_status:addition.requester_type==='CLIENT'?'BELUM_DITAGIHKAN':'TIDAK_DITAGIHKAN'});
+  if(!addition.item_id){const {data:newItem,error:itemError}=await db.from('boq_items').insert({boq_code:code,description:addition.description,category:'PEKERJAAN TAMBAH',quantity:0,uom:addition.uom,unit_rate:Number(addition.unit_rate||0),remarks:addition.owner_type==='IMK'?'By IMK':'By kontraktor',source_sheet:'PEKERJAAN TAMBAH',is_active:true,is_stock_item:addition.is_stock_item}).select('*').single();if(itemError){setBusy(false);setError(itemError.message);return;}item=newItem;}
+  const {error}=await db.from('boq_additions').insert({addition_code:code,item_id:item?.id||null,description:addition.description||item?.description,quantity:Number(addition.quantity),uom:addition.uom||item?.uom,unit_rate:Number(addition.unit_rate||item?.unit_rate||0),requester_type:addition.requester_type,chargeable_to_client:addition.requester_type==='CLIENT',reason:addition.reason,requested_by_name:addition.requested_by_name,approval_reference:addition.approval_reference||null,notes:addition.notes||null,created_by:user.id,billing_status:addition.requester_type==='CLIENT'?'BELUM_DITAGIHKAN':'TIDAK_DITAGIHKAN'});
   setBusy(false);if(error){setError(error.message);return;}setNotice('Pekerjaan tambah tercatat. Status awal DIAJUKAN; belum menambah target pemenuhan sampai disetujui.');setAddition({item_id:'',description:'',quantity:'',uom:'',unit_rate:'',requester_type:'CLIENT',reason:'',requested_by_name:user.name,approval_reference:'',notes:''});await load();
  };
  const changeAddition=async(id:string,patch:Record<string,any>)=>{
@@ -86,6 +87,8 @@ export const ProjectControlView:React.FC=()=>{
     <label><span className={label}>Qty tambahan</span><input required type="number" min="0.0001" step="any" className={input} value={addition.quantity} onChange={e=>setAddition({...addition,quantity:e.target.value})}/></label>
     <label><span className={label}>UOM</span><input required className={input} value={addition.uom} onChange={e=>setAddition({...addition,uom:e.target.value})}/></label>
     <label><span className={label}>Harga satuan (Rp)</span><input required type="number" min="0" step="any" className={input} value={addition.unit_rate} onChange={e=>setAddition({...addition,unit_rate:e.target.value})}/></label>
+    <label><span className={label}>Kepemilikan item</span><select className={input} value={addition.owner_type} onChange={e=>setAddition({...addition,owner_type:e.target.value})}><option value="KONTRAKTOR">By Kontraktor</option><option value="IMK">By IMK</option></select></label>
+    <label><span className={label}>Jenis item</span><select className={input} value={addition.is_stock_item?'STOK':'JASA'} onChange={e=>setAddition({...addition,is_stock_item:e.target.value==='STOK'})}><option value="STOK">Material / barang stok</option><option value="JASA">Jasa / non-stok</option></select></label>
     <label><span className={label}>Pihak pengaju</span><select className={input} value={addition.requester_type} onChange={e=>setAddition({...addition,requester_type:e.target.value})}><option value="CLIENT">Klien (dapat ditagihkan)</option><option value="CONTRACTOR">Kontraktor (tidak ditagihkan)</option></select></label>
     <label><span className={label}>Diminta oleh</span><input required className={input} value={addition.requested_by_name} onChange={e=>setAddition({...addition,requested_by_name:e.target.value})}/></label>
     <label><span className={label}>Referensi permintaan / persetujuan</span><input className={input} value={addition.approval_reference} onChange={e=>setAddition({...addition,approval_reference:e.target.value})}/></label>
