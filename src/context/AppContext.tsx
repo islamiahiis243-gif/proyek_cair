@@ -28,11 +28,15 @@ interface AppContextType {
   dataError:string|null;
   cashAccess:boolean;
   cashWriteAccess:boolean;
+  cashHasEntries:boolean;
+  recordedStockCount:number;
+  unrecordedStockCount:number;
   stockWriteAccess:boolean;
 }
 const AppContext=createContext<AppContextType|undefined>(undefined);
 const THEME_KEY='proyek_cair_theme';
-export function computeItemStatus(stok:number,minStok:number):AvailabilityStatus {
+export function computeItemStatus(stok:number,minStok:number,hasHistory=true):AvailabilityStatus {
+  if(!hasHistory)return 'Belum Dicatat';
   if(stok<=0)return 'Tidak Tersedia';
   if(stok<=minStok)return 'Stok Menipis';
   return 'Tersedia';
@@ -69,6 +73,7 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
   if(cashRes.error)throw cashRes.error;
   if(docsRes.error)throw docsRes.error;
   const balance=new Map<string,number>();
+  const stockHistory=new Set<string>((stockRes.data||[]).map((t:any)=>t.item_id));
   const stockRows:MutasiBarang[]=(stockRes.data||[]).map((t:any)=>{
    const before=balance.get(t.item_id)||0;
    const incoming=['MASUK','PENYESUAIAN_MASUK'].includes(t.transaction_type);
@@ -76,7 +81,7 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
    const after=before+delta;balance.set(t.item_id,after);
    return {id:t.id,barang_id:t.item_id,nama_barang:'',jenis:incoming?'MASUK':'KELUAR',jumlah:Number(t.quantity),satuan:t.uom,tujuan_keperluan:t.location||t.notes||'-',pic_penerima_penyerah:t.counterparty||'-',nomor_surat_jalan:t.reference_no||undefined,tanggal:t.occurred_at,stok_sebelum:before,stok_sesudah:after,catatan:t.notes||undefined};
   });
-  const mappedItems:ItemBarang[]=(boqRes.data||[]).map((b:any)=>({id:b.id,kode_boq:b.boq_code,source_sheet:b.source_sheet,source_row:b.source_row,nama_barang:b.description,kategori:b.category||'Tanpa kategori',qty_boq:Number(b.quantity),is_stock_item:Boolean(b.is_stock_item),satuan:b.uom,harga_satuan:Number(b.unit_rate||0),stok_saat_ini:balance.get(b.id)||0,stok_minimum:0,status:computeItemStatus(balance.get(b.id)||0,0),keterangan:b.remarks||''}));
+  const mappedItems:ItemBarang[]=(boqRes.data||[]).map((b:any)=>({id:b.id,kode_boq:b.boq_code,source_sheet:b.source_sheet,source_row:b.source_row,nama_barang:b.description,kategori:b.category||'Tanpa kategori',qty_boq:Number(b.quantity),is_stock_item:Boolean(b.is_stock_item),has_stock_history:stockHistory.has(b.id),satuan:b.uom,harga_satuan:Number(b.unit_rate||0),stok_saat_ini:balance.get(b.id)||0,stok_minimum:0,status:computeItemStatus(balance.get(b.id)||0,0,stockHistory.has(b.id)),keterangan:b.remarks||''}));
   const nameById=new Map(mappedItems.map(x=>[x.id,x.nama_barang]));
   stockRows.forEach(x=>{x.nama_barang=nameById.get(x.barang_id)||'Item BOQ';});
   let cashBalance=0;
@@ -102,9 +107,12 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
  const stockItems=items.filter(x=>x.is_stock_item);
  const totalStockAssetValue=stockItems.reduce((s,x)=>s+x.stok_saat_ini*x.harga_satuan,0);
  const currentCashBalance=cashMutations[0]?.saldo_setelah??0;
- const outOfStockCount=stockItems.filter(x=>x.stok_saat_ini<=0).length;
+ const cashHasEntries=cashMutations.length>0;
+ const recordedStockCount=stockItems.filter(x=>x.has_stock_history).length;
+ const unrecordedStockCount=stockItems.length-recordedStockCount;
+ const outOfStockCount=stockItems.filter(x=>x.has_stock_history&&x.stok_saat_ini<=0).length;
  const lowStockCount=stockItems.filter(x=>x.stok_saat_ini>0&&x.stok_saat_ini<=x.stok_minimum).length;
- const availableStockCount=stockItems.filter(x=>x.stok_saat_ini>x.stok_minimum).length;
- return <AppContext.Provider value={{items,stockMutations,cashMutations,documents,user,supabaseConfig,currentView,setCurrentView,verifyingDocId,setVerifyingDocId,addStockMutation,addCashMutation,addDocument,logout,totalStockAssetValue,currentCashBalance,outOfStockCount,lowStockCount,availableStockCount,theme,toggleTheme,dataReady,dataError,cashAccess,cashWriteAccess,stockWriteAccess}}>{children}</AppContext.Provider>;
+ const availableStockCount=stockItems.filter(x=>x.has_stock_history&&x.stok_saat_ini>x.stok_minimum).length;
+ return <AppContext.Provider value={{items,stockMutations,cashMutations,documents,user,supabaseConfig,currentView,setCurrentView,verifyingDocId,setVerifyingDocId,addStockMutation,addCashMutation,addDocument,logout,totalStockAssetValue,currentCashBalance,outOfStockCount,lowStockCount,availableStockCount,theme,toggleTheme,dataReady,dataError,cashAccess,cashWriteAccess,stockWriteAccess,cashHasEntries,recordedStockCount,unrecordedStockCount}}>{children}</AppContext.Provider>;
 };
 export const useApp=()=>{const c=useContext(AppContext);if(!c)throw new Error('useApp must be used within AppProvider');return c;};
