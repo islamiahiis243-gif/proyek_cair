@@ -1,4 +1,4 @@
-export type AvailabilityStatus = 'Tersedia' | 'Stok Menipis' | 'Tidak Tersedia';
+export type AvailabilityStatus = 'Belum Dicatat' | 'Tersedia' | 'Stok Menipis' | 'Tidak Tersedia';
 
 export interface ItemBarang {
   id: string;
@@ -10,6 +10,7 @@ export interface ItemBarang {
   satuan: string;
   qty_boq: number;
   is_stock_item: boolean;
+  has_stock_history: boolean;
   harga_satuan: number;
   stok_saat_ini: number;
   stok_minimum: number;
