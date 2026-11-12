@@ -136,7 +136,7 @@ export const ReportsView: React.FC = () => {
               <span>Konfigurasi Dokumen Laporan</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Tentukan jenis laporan, rentang tanggal transaksi, serta pihak penandatangan digital.
+              Tentukan jenis laporan, rentang tanggal transaksi, serta identitas akun penyusun laporan.
             </p>
           </div>
 
@@ -265,10 +265,10 @@ export const ReportsView: React.FC = () => {
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <FileText className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-              <span>Arsip Dokumen Resmi yang Diterbitkan</span>
+              <span>Arsip Laporan Tersimpan</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Daftar dokumen laporan yang tersimpan dalam sistem dengan tanda tangan QR Code terdaftar.
+              Daftar metadata laporan yang disimpan bersama snapshot transaksi dan checksum SHA-256.
             </p>
           </div>
           <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">
