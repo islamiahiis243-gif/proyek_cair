@@ -13,7 +13,7 @@ import { ItemBarang, JenisMutasiBarang, JenisMutasiKas } from './types';
 import { AuthGate } from './components/AuthGate';
 
 const MainApp: React.FC = () => {
-  const { currentView, setCurrentView } = useApp();
+  const { currentView, setCurrentView, stockWriteAccess } = useApp();
 
   // Stock mutation modal state
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
@@ -55,7 +55,7 @@ const MainApp: React.FC = () => {
           )}
 
           {currentView === 'inventory' && (
-            <InventoryView onQuickMutate={handleQuickMutateFromInventory} />
+            <InventoryView onQuickMutate={handleQuickMutateFromInventory} canMutate={stockWriteAccess} />
           )}
 
           {currentView === 'stock-mutations' && (
