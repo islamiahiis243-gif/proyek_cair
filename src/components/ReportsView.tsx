@@ -40,9 +40,8 @@ export const ReportsView: React.FC = () => {
     setGenerationSuccess(null);
 
     try {
-      const docCounter = documents.length + 1;
       const dateTag = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const docId = `DOC-PC-${dateTag}-${String(docCounter).padStart(3, '0')}`;
+      const docId = `DOC-UDU-${dateTag}-${crypto.randomUUID().slice(0,8).toUpperCase()}`;
 
 
       if (reportType === 'cash' && !cashAccess) throw new Error('Role akun ini tidak memiliki akses ke data kas.');
@@ -53,6 +52,7 @@ export const ReportsView: React.FC = () => {
         });
 
         if (filtered.length === 0) throw new Error('Tidak ada transaksi stok pada periode yang dipilih. Laporan tidak dibuat.');
+        filtered.sort((a,b)=>new Date(a.tanggal).getTime()-new Date(b.tanggal).getTime());
         const newDoc = await generateStockMutationPDF({
           docId,
           startDate,
@@ -70,6 +70,7 @@ export const ReportsView: React.FC = () => {
         });
 
         if (filtered.length === 0) throw new Error('Tidak ada transaksi kas pada periode yang dipilih. Laporan tidak dibuat.');
+        filtered.sort((a,b)=>new Date(a.tanggal).getTime()-new Date(b.tanggal).getTime());
         const newDoc = await generateCashflowPDF({
           docId,
           startDate,
