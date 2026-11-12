@@ -319,7 +319,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {cashAccess?'Belum ada transaksi kas.':'Data kas tidak tersedia untuk role akun ini.'}
               </div>
             ) : (
-              cashMutations.slice(-5).reverse().map((c) => (
+              cashMutations.slice(0, 5).map((c) => (
                 <div key={c.id} className="p-3.5 hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors flex items-center justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
                     <div
