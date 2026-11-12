@@ -108,8 +108,6 @@ const MainApp: React.FC = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AuthGate><MainApp /></AuthGate>
-    </AppProvider>
+    <AuthGate><AppProvider><MainApp /></AppProvider></AuthGate>
   );
 }
