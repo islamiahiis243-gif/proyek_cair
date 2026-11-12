@@ -58,15 +58,16 @@ export const ReportsView: React.FC = () => {
           return dateOnly >= startDate && dateOnly <= endDate;
         });
 
+        if (filtered.length === 0) throw new Error('Tidak ada transaksi stok pada periode yang dipilih. Laporan tidak dibuat.');
         const newDoc = await generateStockMutationPDF({
           docId,
           startDate,
           endDate,
-          mutations: filtered.length > 0 ? filtered : stockMutations,
+          mutations: filtered,
           signer: activeUser,
         });
 
-        addDocument(newDoc);
+        await addDocument(newDoc);
         setGenerationSuccess(`Laporan Mutasi Barang (${docId}) berhasil dicetak dan diunduh.`);
       } else {
         const filtered = cashMutations.filter((c) => {
@@ -74,11 +75,12 @@ export const ReportsView: React.FC = () => {
           return dateOnly >= startDate && dateOnly <= endDate;
         });
 
+        if (filtered.length === 0) throw new Error('Tidak ada transaksi kas pada periode yang dipilih. Laporan tidak dibuat.');
         const newDoc = await generateCashflowPDF({
           docId,
           startDate,
           endDate,
-          cashMutations: filtered.length > 0 ? filtered : cashMutations,
+          cashMutations: filtered,
           signer: activeUser,
         });
 
