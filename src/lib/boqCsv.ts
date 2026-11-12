@@ -30,7 +30,7 @@ export function makeBoqCsv(sections: any[], items: any[]): string {
   const parentRow = new Map(sections.map(s => [s.id, s.source_row]));
   const header = ['row_type','level','parent_source_row','node_code','boq_code','description','quantity','uom','unit_rate','remarks','is_stock_item','source_excel_row','source_color','source_total_price','category'];
   const sectionRows = sections.map(s => ['SECTION',s.level,s.parent_id ? parentRow.get(s.parent_id) : '',s.node_code,'',s.description,s.source_qty,s.source_uom,'','','',s.source_row,s.source_color,s.source_total_price,'']);
-  const itemRows = items.map(i => ['ITEM',4,parentRow.get(i.parent_section_id || '') || '', '',i.kode_boq,i.nama_barang,i.qty_boq,i.satuan,i.harga_satuan,i.keterangan || '',i.is_stock_item,i.source_excel_row ?? '', '', '',i.kategori || '']);
+  const itemRows = items.map(i => ['ITEM',4,parentRow.get(i.parent_section_id || '') || '', '',i.kode_boq,i.nama_barang,i.source_qty,i.source_uom,i.harga_satuan,i.keterangan || '',i.is_stock_item,i.source_excel_row ?? '', '', '',i.kategori || '']);
   return [header, ...sectionRows, ...itemRows].map(r => r.map(cell).join(',')).join('\r\n');
 }
 
