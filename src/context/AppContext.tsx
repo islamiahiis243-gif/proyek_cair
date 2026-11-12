@@ -92,11 +92,12 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
   if(error)throw error;await refreshData();
  };
  const logout=async()=>{try{await signOutSupabase();}finally{setUser({...DEFAULT_USER,id:'',email:''});}};
- const totalStockAssetValue=items.reduce((s,x)=>s+x.stok_saat_ini*x.harga_satuan,0);
+ const stockItems=items.filter(x=>x.is_stock_item);
+ const totalStockAssetValue=stockItems.reduce((s,x)=>s+x.stok_saat_ini*x.harga_satuan,0);
  const currentCashBalance=cashMutations[0]?.saldo_setelah??0;
- const outOfStockCount=items.filter(x=>x.stok_saat_ini<=0).length;
- const lowStockCount=items.filter(x=>x.stok_saat_ini>0&&x.stok_saat_ini<=x.stok_minimum).length;
- const availableStockCount=items.filter(x=>x.stok_saat_ini>x.stok_minimum).length;
+ const outOfStockCount=stockItems.filter(x=>x.stok_saat_ini<=0).length;
+ const lowStockCount=stockItems.filter(x=>x.stok_saat_ini>0&&x.stok_saat_ini<=x.stok_minimum).length;
+ const availableStockCount=stockItems.filter(x=>x.stok_saat_ini>x.stok_minimum).length;
  return <AppContext.Provider value={{items,stockMutations,cashMutations,documents,user,supabaseConfig,currentView,setCurrentView,verifyingDocId,setVerifyingDocId,addStockMutation,addCashMutation,addDocument,logout,totalStockAssetValue,currentCashBalance,outOfStockCount,lowStockCount,availableStockCount,theme,toggleTheme,dataReady,dataError}}>{children}</AppContext.Provider>;
 };
 export const useApp=()=>{const c=useContext(AppContext);if(!c)throw new Error('useApp must be used within AppProvider');return c;};
