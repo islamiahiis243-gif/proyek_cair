@@ -8,6 +8,7 @@ export interface ItemBarang {
   nama_barang: string;
   kategori: string;
   satuan: string;
+  qty_boq: number;
   harga_satuan: number;
   stok_saat_ini: number;
   stok_minimum: number;
@@ -70,7 +71,7 @@ export interface UserProfile {
   name: string;
   email: string;
   avatar_url?: string;
-  role: 'Project Manager' | 'Logistik & Gudang' | 'Site Manager' | 'Mandor Lapangan';
+  role: 'Project Manager' | 'Logistik & Gudang' | 'Site Manager' | 'Mandor Lapangan' | 'Viewer';
   provider: 'google' | 'guest';
 }
 
