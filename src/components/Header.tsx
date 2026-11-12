@@ -4,7 +4,7 @@ import { Building2, CloudCheck, CloudOff, LogIn, LogOut, Plus, ShieldCheck, Sun,
 import { formatRupiah } from '../lib/pdfGenerator';
 
 export const Header: React.FC = () => {
-  const { user, supabaseConfig, logout, currentCashBalance, cashAccess, setCurrentView, theme, toggleTheme } = useApp();
+  const { user, supabaseConfig, logout, currentCashBalance, cashAccess, stockWriteAccess, setCurrentView, theme, toggleTheme } = useApp();
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-8 px-6 py-3.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors">
@@ -73,13 +73,13 @@ export const Header: React.FC = () => {
           )}
         </button>
 
-        <button
+        {stockWriteAccess && <button
           onClick={() => setCurrentView('stock-mutations')}
           className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Catat Mutasi</span>
-        </button>
+        </button>}
 
         {user.id ? (
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
