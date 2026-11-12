@@ -40,6 +40,12 @@ export interface MutasiBarang {
   stok_sebelum: number;
   stok_sesudah: number;
   catatan?: string;
+  source_name?: string;
+  destination_name?: string;
+  recipient_name?: string;
+  owner_type?: 'KONTRAKTOR'|'IMK';
+  purpose?: string;
+  addition_id?: string;
 }
 
 export type JenisMutasiKas = 'MASUK' | 'KELUAR';
