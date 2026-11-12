@@ -87,7 +87,7 @@ export const VerificationPortal: React.FC = () => {
           </button>
           <div>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Portal Validasi Dokumen Digital
+              Portal Pemeriksaan Checksum Data
             </h1>
             <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               Pemeriksaan checksum snapshot transaksi yang tersimpan di database UDU.
@@ -135,7 +135,7 @@ export const VerificationPortal: React.FC = () => {
               </h2>
               <div className="text-xs text-slate-400 flex items-center gap-2">
                 <Building2 className="w-3.5 h-3.5" />
-                <span>Proyek: Trainer & UDU Office (Master BOQ Kontraktor)</span>
+                <span>Proyek: Trainer & UDU Office (Master BOQ Sheet 1)</span>
               </div>
             </div>
 
