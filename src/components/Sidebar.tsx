@@ -11,6 +11,7 @@ import {
   HardHat,
   ChevronRight,
   AlertCircle,
+  CalendarClock,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -23,6 +24,7 @@ export const Sidebar: React.FC = () => {
       icon: LayoutDashboard,
       badge: null,
     },
+    { id: 'project-control', label: 'Jadwal, Tambahan & Audit', icon: CalendarClock, badge: null },
     {
       id: 'inventory',
       label: 'Katalog & Stok Barang',
