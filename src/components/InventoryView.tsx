@@ -3,13 +3,34 @@ import {useApp} from '../context/AppContext';
 import {ItemBarang,AvailabilityStatus} from '../types';
 import {Search,Package,ArrowDownLeft,ArrowUpRight,AlertCircle,CheckCircle2,XCircle,ClipboardList,History,X} from 'lucide-react';
 import {formatRupiah} from '../lib/pdfGenerator';
+import {getSupabaseClient} from '../lib/supabase';
+import {makeBoqCsv,parseBoqCsv} from '../lib/boqCsv';
 interface InventoryViewProps{onQuickMutate:(item:ItemBarang,type:'MASUK'|'KELUAR')=>void;canMutate:boolean;}
 export const InventoryView:React.FC<InventoryViewProps>=({onQuickMutate,canMutate})=>{
- const {items,boqSections,stockMutations,dataReady,dataError}=useApp();
+ const {items,boqSections,stockMutations,dataReady,dataError,user}=useApp();
  const [historyItem,setHistoryItem]=useState<ItemBarang|null>(null);
  const [query,setQuery]=useState('');
  const [scope,setScope]=useState<'ALL'|'STOCK'|'SERVICE'>('ALL');
+ const [csvPreview,setCsvPreview]=useState<{sections:any[];items:any[];errors:string[]}|null>(null);
+ const [importReason,setImportReason]=useState('Sinkronisasi master BOQ dari file sumber yang telah diverifikasi');
+ const [importBusy,setImportBusy]=useState(false);
+ const [importMessage,setImportMessage]=useState('');
  const visible=useMemo(()=>items.filter(x=>(scope==='ALL'||(scope==='STOCK'?x.is_stock_item:!x.is_stock_item))&&[x.kode_boq,x.nama_barang,x.kategori,x.keterangan||''].join(' ').toLowerCase().includes(query.toLowerCase())),[items,query,scope]);
+ const exportMasterCsv=()=>{
+  const csv=makeBoqCsv(boqSections,items);
+  const blob=new Blob(['\\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='proyek-cair-master-boq.csv';a.click();URL.revokeObjectURL(url);
+ };
+ const readCsvFile=async(file:File)=>{setImportMessage('');setCsvPreview(parseBoqCsv(await file.text()));};
+ const commitCsvImport=async()=>{
+  if(!csvPreview||csvPreview.errors.length||user.databaseRole!=='admin')return;
+  setImportBusy(true);setImportMessage('');
+  const result=await getSupabaseClient().rpc('import_boq_master_batch',{p_sections:csvPreview.sections,p_items:csvPreview.items,p_reason:importReason});
+  setImportBusy(false);
+  if(result.error){setImportMessage('Import gagal: '+result.error.message);return;}
+  setImportMessage('Import berhasil: '+(result.data?.sections_affected||0)+' kelompok dan '+(result.data?.items_affected||0)+' item. Audit tersimpan; memuat ulang…');
+  window.setTimeout(()=>window.location.reload(),1200);
+ };
  const badge=(status:AvailabilityStatus)=>status==='Tersedia'?<span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700"><CheckCircle2 className="h-3 w-3"/>Tersedia</span>:status==='Stok Menipis'?<span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700"><AlertCircle className="h-3 w-3"/>Menipis</span>:<span className="inline-flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-700"><XCircle className="h-3 w-3"/>Belum ada stok</span>;
 
  const [expanded,setExpanded]=useState<Set<string>>(new Set());
@@ -52,6 +73,18 @@ export const InventoryView:React.FC<InventoryViewProps>=({onQuickMutate,canMutat
     <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Cari kode BOQ, uraian, kategori..." className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-white"/></div>
     <div className="flex gap-1">{[{id:'ALL',label:'Semua BOQ'},{id:'STOCK',label:'Material stok'},{id:'SERVICE',label:'Jasa / non-stok'}].map(x=><button key={x.id} onClick={()=>setScope(x.id as any)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${scope===x.id?'bg-blue-600 text-white':'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{x.label}</button>)}</div>
    </div>
+   <div className="mt-3 flex flex-wrap items-center gap-2">
+    <button onClick={exportMasterCsv} className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">Ekspor Master BOQ (CSV)</button>
+    {user.databaseRole==='admin'&&<label className="cursor-pointer rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">Pilih CSV untuk import<input type="file" accept=".csv,text/csv" className="hidden" onChange={e=>{const file=e.target.files?.[0];if(file)readCsvFile(file);e.currentTarget.value='';}}/></label>}
+    <span className="text-[10px] text-slate-500">Import batch hanya untuk admin; perubahan dicatat di audit.</span>
+   </div>
+   {csvPreview&&<div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+    <div className="flex justify-between text-xs font-semibold"><span>Preview: {csvPreview.sections.length} kelompok · {csvPreview.items.length} item</span><button onClick={()=>setCsvPreview(null)} className="text-rose-600">Tutup</button></div>
+    {csvPreview.errors.length>0?<ul className="mt-2 list-disc pl-5 text-[11px] text-rose-600">{csvPreview.errors.slice(0,10).map((x,i)=><li key={i}>{x}</li>)}</ul>:<p className="mt-1 text-[11px] text-emerald-700">Format valid. Import memperbarui master berdasarkan kode BOQ dan mencatat perubahan audit.</p>}
+    <label className="mt-2 block text-[11px]">Alasan import<input value={importReason} onChange={e=>setImportReason(e.target.value)} className="mt-1 w-full rounded border bg-white px-2 py-1.5 dark:bg-slate-900"/></label>
+    <button disabled={importBusy||csvPreview.errors.length>0||!csvPreview.items.length||importReason.trim().length<8} onClick={commitCsvImport} className="mt-2 rounded bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40">{importBusy?'Mengimpor…':'Konfirmasi Import Batch'}</button>
+   </div>}
+   {importMessage&&<p className="mt-2 text-[11px] text-blue-700">{importMessage}</p>}
   </div>
   {dataReady&&boqSections.length>0&&<div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="flex items-center justify-between border-b p-4 dark:border-slate-700"><div><h2 className="text-sm font-bold">Struktur Master BOQ</h2><p className="text-[10px] text-slate-500">4 level hierarki; subtotal kelompok dihitung dari item turunan. Warna mengikuti master Excel.</p></div><button onClick={()=>setExpanded(expanded.size===boqSections.length?new Set():new Set(boqSections.map(x=>x.id)))} className="rounded border px-3 py-1.5 text-[10px]">{expanded.size===boqSections.length?'Tutup semua':'Buka semua'}</button></div><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-800"><tr><th className="px-3 py-2">Kode / Kelompok / Item</th><th className="px-3 py-2">Uraian</th><th className="px-3 py-2">Kepemilikan</th><th className="px-3 py-2 text-right">Qty BOQ</th><th className="px-3 py-2">UOM</th><th className="px-3 py-2 text-right">Masuk</th><th className="px-3 py-2 text-right">Keluar</th><th className="px-3 py-2 text-right">Sisa penuhi</th><th className="px-3 py-2 text-right">Saldo</th><th className="px-3 py-2">Pemenuhan</th><th className="px-3 py-2">Stok</th><th className="px-3 py-2">Mutasi</th></tr></thead><tbody>{boqSections.filter(x=>!x.parent_id).sort((a,b)=>a.sort_order-b.sort_order).map(x=>renderSection(x))}</tbody></table></div></div>}
   {dataError&&<div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">Gagal memuat database: {dataError}</div>}
