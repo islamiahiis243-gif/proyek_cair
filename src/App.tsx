@@ -9,6 +9,7 @@ import { CashflowView } from './components/CashflowView';
 import { ReportsView } from './components/ReportsView';
 import { VerificationPortal } from './components/VerificationPortal';
 import { SettingsView } from './components/SettingsView';
+import { ProjectControlView } from './components/ProjectControlView';
 import { ItemBarang, JenisMutasiBarang, JenisMutasiKas } from './types';
 import { AuthGate } from './components/AuthGate';
 
@@ -53,6 +54,8 @@ const MainApp: React.FC = () => {
               onOpenCashModal={handleOpenCashModal}
             />
           )}
+
+          {currentView === 'project-control' && <ProjectControlView />}
 
           {currentView === 'inventory' && (
             <InventoryView onQuickMutate={handleQuickMutateFromInventory} canMutate={stockWriteAccess} />
