@@ -280,7 +280,7 @@ export const ReportsView: React.FC = () => {
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {documents.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500">
-              Belum ada dokumen yang diterbitkan.
+              Belum ada laporan yang tersimpan.
             </div>
           ) : (
             documents.map((doc) => (
@@ -298,11 +298,12 @@ export const ReportsView: React.FC = () => {
                       <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/60">
                         {doc.id}
                       </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-800">{doc.status || 'DRAFT'}</span>
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-2">
                       <span>Periode: {formatDateOnly(doc.periode_awal)} - {formatDateOnly(doc.periode_akhir)}</span>
                       <span>·</span>
-                      <span>Penandatangan: {doc.penandatangan_nama} ({doc.penandatangan_jabatan})</span>
+                      <span>Penyusun: {doc.penandatangan_nama} (role: {doc.penandatangan_jabatan})</span>
                       <span>·</span>
                       <span>{formatDateTime(doc.dibuat_pada)}</span>
                     </div>
@@ -315,7 +316,7 @@ export const ReportsView: React.FC = () => {
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-lg transition-colors border border-blue-200 dark:border-blue-800/60"
                   >
                     <QrCode className="w-3.5 h-3.5" />
-                    <span>Validasi QR Dokumen</span>
+                    <span>Periksa checksum</span>
                   </button>
                 </div>
               </div>
