@@ -67,7 +67,7 @@ export const ReportsView: React.FC = () => {
           signer: activeUser,
         });
 
-        await addDocument(newDoc);
+        await await addDocument(newDoc);
         setGenerationSuccess(`Laporan Mutasi Barang (${docId}) berhasil dicetak dan diunduh.`);
       } else {
         const filtered = cashMutations.filter((c) => {
@@ -84,7 +84,7 @@ export const ReportsView: React.FC = () => {
           signer: activeUser,
         });
 
-        addDocument(newDoc);
+        await addDocument(newDoc);
         setGenerationSuccess(`Laporan Buku Kas (${docId}) berhasil dicetak dan diunduh.`);
       }
     } catch (err: any) {
