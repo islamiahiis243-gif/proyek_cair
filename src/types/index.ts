@@ -11,6 +11,8 @@ export interface ItemBarang {
   qty_boq: number;
   is_stock_item: boolean;
   has_stock_history: boolean;
+  qty_tambahan_disetujui: number;
+  target_kebutuhan_total: number;
   qty_masuk_total: number;
   qty_keluar_total: number;
   qty_pemenuhan_sisa: number;
