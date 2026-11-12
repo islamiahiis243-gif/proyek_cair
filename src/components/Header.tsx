@@ -4,7 +4,7 @@ import { Building2, CloudCheck, CloudOff, LogIn, LogOut, Plus, ShieldCheck, Sun,
 import { formatRupiah } from '../lib/pdfGenerator';
 
 export const Header: React.FC = () => {
-  const { user, supabaseConfig, loginGoogle, logout, currentCashBalance, setCurrentView, theme, toggleTheme } = useApp();
+  const { user, supabaseConfig, logout, currentCashBalance, cashAccess, setCurrentView, theme, toggleTheme } = useApp();
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-8 px-6 py-3.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors">
@@ -38,7 +38,7 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <span className="text-slate-400 dark:text-slate-500">Saldo Kas:</span>
           <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-            {formatRupiah(currentCashBalance)}
+            {cashAccess?formatRupiah(currentCashBalance):'Akses terbatas'}
           </span>
         </div>
         <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
@@ -51,7 +51,7 @@ export const Header: React.FC = () => {
           ) : (
             <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
               <CloudOff className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-              <span>Penyimpanan Lokal Aktif</span>
+              <span>Database belum terhubung</span>
             </span>
           )}
         </div>
@@ -105,15 +105,7 @@ export const Header: React.FC = () => {
               <LogOut className="w-4 h-4" />
             </button>
           </div>
-        ) : (
-          <button
-            onClick={loginGoogle}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
-          >
-            <LogIn className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>Sign In Google</span>
-          </button>
-        )}
+        ) : null}
       </div>
     </header>
   );
