@@ -41,7 +41,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
   const [mutationType, setMutationType] = useState<JenisMutasiBarang>(preselectedType || 'MASUK');
   const [qty, setQty] = useState<number>(1);
   const [purpose, setPurpose] = useState('');
-  const [pic, setPic] = useState(user.name || 'Petugas Logistik');
+  const [pic, setPic] = useState(user.name);
   const [suratJalan, setSuratJalan] = useState('');
   const [notes, setNotes] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
   }, [preselectedItem, preselectedType]);
 
   const currentSelectedItem = useMemo(() => {
-    return items.find((it) => it.id === selectedItemId) || items[0];
+    return items.find((it) => it.id === selectedItemId && it.is_stock_item) || items.find((it) => it.is_stock_item);
   }, [items, selectedItemId]);
 
   // Projected stock
@@ -350,7 +350,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                   onChange={(e) => setSelectedItemId(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
                 >
-                  {items.map((it) => (
+                  {items.filter((it) => it.is_stock_item).map((it) => (
                     <option key={it.id} value={it.id}>
                       {it.nama_barang} (Sisa: {it.stok_saat_ini} {it.satuan} - {it.status})
                     </option>
