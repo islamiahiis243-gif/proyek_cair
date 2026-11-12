@@ -120,7 +120,7 @@ export async function generateStockMutationPDF(params: {
   doc.text(`Tanggal Cetak    : ${formatDateOnly(new Date().toISOString())}`, 14, 51);
 
   doc.text(`Proyek       : Trainer & UDU Office (BOQ Kontraktor)`, pageWidth - 14, 41, { align: 'right' });
-  doc.text(`Penanggung   : ${signer.name} (${signer.role})`, pageWidth - 14, 46, { align: 'right' });
+  doc.text(`Penanggung   : ${signer.name} (${signer.databaseRole || signer.role})`, pageWidth - 14, 46, { align: 'right' });
   doc.text(`Email PIC    : ${signer.email}`, pageWidth - 14, 51, { align: 'right' });
 
   // KPI Summary Strip
@@ -218,7 +218,7 @@ export async function generateStockMutationPDF(params: {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
   doc.text('Disusun Oleh,', 14, signY);
-  doc.text(signer.role, 14, signY + 4);
+  doc.text(signer.databaseRole || signer.role, 14, signY + 4);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
