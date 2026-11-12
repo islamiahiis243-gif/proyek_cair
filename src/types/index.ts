@@ -55,6 +55,7 @@ export interface DokumenLaporan {
   id: string; // e.g. "DOC-PC-202611-001"
   judul: string;
   jenis: 'MUTASI_STOK' | 'MUTASI_KAS' | 'GABUNGAN_PROYEK';
+  status: string;
   periode_awal: string;
   periode_akhir: string;
   dibuat_pada: string;
