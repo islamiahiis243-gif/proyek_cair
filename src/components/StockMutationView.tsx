@@ -228,6 +228,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                 <th className="py-3 px-3.5">Nama Material / Barang</th>
                 <th className="py-3 px-3.5 text-right font-bold">Kuantitas</th>
                 <th className="py-3 px-3.5">Asal / Tujuan Barang</th>
+                <th className="py-3 px-3.5">Dicatat oleh</th>
                 <th className="py-3 px-3.5">Penanggung Jawab (PIC)</th>
                 <th className="py-3 px-3.5 text-center">No. Ref / Bon</th>
                 <th className="py-3 px-3.5 text-right">Perubahan Stok</th>
@@ -236,7 +237,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredMutations.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-slate-500">
                     Belum ada riwayat mutasi barang sesuai filter.
                   </td>
                 </tr>
@@ -271,9 +272,8 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                       </span>{' '}
                       <span className="text-[11px] text-slate-400 dark:text-slate-500 font-normal">{mut.satuan}</span>
                     </td>
-                    <td className="py-3 px-3.5 text-slate-700 dark:text-slate-300 max-w-xs truncate">
-                      {mut.source_name||mut.destination_name||mut.tujuan_keperluan}
-                    </td>
+                    <td className="py-3 px-3.5 text-slate-700 dark:text-slate-300 max-w-xs truncate">{mut.source_name||mut.destination_name||mut.tujuan_keperluan}</td>
+                    <td className="py-3 px-3.5 text-slate-700 dark:text-slate-300">{mut.created_by_name||'-'}</td>
                     <td className="py-3 px-3.5 text-slate-700 dark:text-slate-300">
                       {mut.pic_penerima_penyerah}
                     </td>
