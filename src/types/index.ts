@@ -3,6 +3,8 @@ export type AvailabilityStatus = 'Belum Dicatat' | 'Tersedia' | 'Stok Menipis' |
 export interface ItemBarang {
   parent_section_id?: string | null;
   source_excel_row?: number | null;
+  source_qty?: number | null;
+  source_uom?: string | null;
   id: string;
   kode_boq: string;
   source_sheet?: string;
