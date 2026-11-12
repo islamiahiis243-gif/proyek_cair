@@ -29,7 +29,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
   defaultType = 'KELUAR',
   modalOnly = false,
 }) => {
-  const { cashMutations, addCashMutation, currentCashBalance, user, cashAccess } = useApp();
+  const { cashMutations, addCashMutation, currentCashBalance, user, cashAccess, cashWriteAccess } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'MASUK' | 'KELUAR'>('ALL');
@@ -120,7 +120,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
     setIsModalOpen(false);
   };
 
-  if (modalOnly && !isModalOpen) {
+  if (modalOnly && (!isModalOpen || !cashWriteAccess)) {
     return null;
   }
 
@@ -144,6 +144,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {cashWriteAccess && <>
           <button
             onClick={() => handleOpenModal('MASUK')}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow-sm"
@@ -158,6 +159,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
             <ArrowUpRight className="w-4 h-4" />
             <span>- Kas Keluar (OUT)</span>
           </button>
+          </>}
         </div>
       </div>
 
