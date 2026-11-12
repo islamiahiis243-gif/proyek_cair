@@ -65,6 +65,7 @@ export interface DokumenLaporan {
   total_transaksi: number;
   ringkasan_nilai_rp: number;
   qr_payload: string;
+  snapshot_json?: string;
 }
 
 export interface UserProfile {
