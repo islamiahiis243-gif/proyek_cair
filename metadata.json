@@ -1,6 +1,6 @@
 {
   "name": "Proyek Cair",
-  "description": "Aplikasi mutasi barang dan kas real-time dengan dashboard analitik, sinkronisasi cloud, otomasi stok nol, dan laporan PDF ber-QR Code validasi resmi.",
+  "description": "Aplikasi kontrol master BOQ, mutasi stok fisik, mutasi kas, dan laporan berdasarkan data operasional Supabase.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
