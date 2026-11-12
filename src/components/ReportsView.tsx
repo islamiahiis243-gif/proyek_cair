@@ -75,7 +75,7 @@ export const ReportsView: React.FC = () => {
           startDate,
           endDate,
           cashMutations: filtered,
-          signer: activeUser,
+          signer: user,
         });
 
         await addDocument(newDoc);
