@@ -75,6 +75,7 @@ export interface UserProfile {
   avatar_url?: string;
   role: 'Project Manager' | 'Logistik & Gudang' | 'Site Manager' | 'Mandor Lapangan' | 'Viewer';
   provider: 'google' | 'guest';
+  databaseRole?: string;
 }
 
 export interface SupabaseConfig {
