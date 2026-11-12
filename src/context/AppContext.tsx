@@ -27,6 +27,8 @@ interface AppContextType {
   dataReady:boolean;
   dataError:string|null;
   cashAccess:boolean;
+  cashWriteAccess:boolean;
+  stockWriteAccess:boolean;
 }
 const AppContext=createContext<AppContextType|undefined>(undefined);
 const THEME_KEY='proyek_cair_theme';
@@ -47,6 +49,8 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
  const [dataReady,setDataReady]=useState(false);
  const [dataError,setDataError]=useState<string|null>(null);
  const [cashAccess,setCashAccess]=useState(false);
+ const cashWriteAccess=['admin','site_manager','finance'].includes(user.databaseRole||'');
+ const stockWriteAccess=['admin','site_manager','storekeeper'].includes(user.databaseRole||'');
  const [theme,setTheme]=useState<'light'|'dark'>(()=>{try{const v=localStorage.getItem(THEME_KEY);if(v==='dark'||v==='light')return v;}catch{}return 'dark';});
  useEffect(()=>{document.documentElement.classList.toggle('dark',theme==='dark');localStorage.setItem(THEME_KEY,theme);},[theme]);
  const toggleTheme=()=>setTheme(v=>v==='light'?'dark':'light');
@@ -101,6 +105,6 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
  const outOfStockCount=stockItems.filter(x=>x.stok_saat_ini<=0).length;
  const lowStockCount=stockItems.filter(x=>x.stok_saat_ini>0&&x.stok_saat_ini<=x.stok_minimum).length;
  const availableStockCount=stockItems.filter(x=>x.stok_saat_ini>x.stok_minimum).length;
- return <AppContext.Provider value={{items,stockMutations,cashMutations,documents,user,supabaseConfig,currentView,setCurrentView,verifyingDocId,setVerifyingDocId,addStockMutation,addCashMutation,addDocument,logout,totalStockAssetValue,currentCashBalance,outOfStockCount,lowStockCount,availableStockCount,theme,toggleTheme,dataReady,dataError,cashAccess}}>{children}</AppContext.Provider>;
+ return <AppContext.Provider value={{items,stockMutations,cashMutations,documents,user,supabaseConfig,currentView,setCurrentView,verifyingDocId,setVerifyingDocId,addStockMutation,addCashMutation,addDocument,logout,totalStockAssetValue,currentCashBalance,outOfStockCount,lowStockCount,availableStockCount,theme,toggleTheme,dataReady,dataError,cashAccess,cashWriteAccess,stockWriteAccess}}>{children}</AppContext.Provider>;
 };
 export const useApp=()=>{const c=useContext(AppContext);if(!c)throw new Error('useApp must be used within AppProvider');return c;};
