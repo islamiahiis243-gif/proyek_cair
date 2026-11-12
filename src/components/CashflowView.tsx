@@ -29,7 +29,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
   defaultType = 'KELUAR',
   modalOnly = false,
 }) => {
-  const { cashMutations, addCashMutation, currentCashBalance, user } = useApp();
+  const { cashMutations, addCashMutation, currentCashBalance, user, cashAccess } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'MASUK' | 'KELUAR'>('ALL');
@@ -122,6 +122,10 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
 
   if (modalOnly && !isModalOpen) {
     return null;
+  }
+
+  if (!cashAccess) {
+    return modalOnly ? null : <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">Akses Buku Kas tidak diberikan untuk role akun ini. Hubungi administrator proyek jika Anda memerlukan akses.</div>;
   }
 
   return (
