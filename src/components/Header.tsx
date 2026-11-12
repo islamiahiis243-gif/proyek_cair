@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Building2, CloudCheck, CloudOff, LogIn, LogOut, Plus, ShieldCheck, Sun, Moon } from 'lucide-react';
+import { Building2, CloudCheck, CloudOff, LogOut, Plus, ShieldCheck, Sun, Moon } from 'lucide-react';
 import { formatRupiah } from '../lib/pdfGenerator';
 
 export const Header: React.FC = () => {
@@ -8,15 +8,17 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-8 px-6 py-3.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors">
-      {/* Zone 1: Brand title wordmark */}
       <div className="flex items-center gap-3 shrink-0">
         <button
           onClick={() => setCurrentView('dashboard')}
           className="flex items-center gap-2.5 text-left focus:outline-none group"
+          aria-label="Proyek Cair - Dashboard"
         >
-          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm group-hover:bg-blue-700 transition-colors">
-            PC
-          </div>
+          <img
+            src="/android-chrome-192x192.png"
+            alt="Logo Menara Megah"
+            className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-200"
+          />
           <div>
             <div className="text-base font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
               Proyek Cair
@@ -28,7 +30,6 @@ export const Header: React.FC = () => {
         </button>
       </div>
 
-      {/* Zone 2: Navigation contextual status / breadcrumb */}
       <div className="hidden md:flex items-center gap-6 text-xs text-slate-500 dark:text-slate-400">
         <div className="flex items-center gap-2">
           <Building2 className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
@@ -38,7 +39,7 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <span className="text-slate-400 dark:text-slate-500">Saldo Kas:</span>
           <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-            {cashAccess?formatRupiah(currentCashBalance):'Akses terbatas'}
+            {cashAccess ? formatRupiah(currentCashBalance) : 'Akses terbatas'}
           </span>
         </div>
         <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
@@ -57,9 +58,7 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Zone 3: 1 Primary user / auth action + Theme Toggle */}
       <div className="flex items-center gap-2.5 shrink-0">
-        {/* Dark / Light Mode Toggle Button */}
         <button
           onClick={toggleTheme}
           title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
@@ -73,13 +72,15 @@ export const Header: React.FC = () => {
           )}
         </button>
 
-        {stockWriteAccess && <button
-          onClick={() => setCurrentView('stock-mutations')}
-          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Catat Mutasi</span>
-        </button>}
+        {stockWriteAccess && (
+          <button
+            onClick={() => setCurrentView('stock-mutations')}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Catat Mutasi</span>
+          </button>
+        )}
 
         {user.id ? (
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
