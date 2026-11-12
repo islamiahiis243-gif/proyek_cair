@@ -73,7 +73,7 @@ export interface UserProfile {
   name: string;
   email: string;
   avatar_url?: string;
-  role: 'Project Manager' | 'Logistik & Gudang' | 'Site Manager' | 'Viewer';
+  role: 'Admin' | 'Project Manager' | 'Logistik & Gudang' | 'Site Manager' | 'Finance' | 'Auditor' | 'Viewer';
   provider: 'google' | 'guest';
   databaseRole?: string;
 }
