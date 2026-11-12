@@ -31,7 +31,7 @@ export function getStoredUser(): UserProfile {
     const raw = localStorage.getItem(STORAGE_KEY_USER);
     if (raw) return JSON.parse(raw);
   } catch {}
-  return { id: '', name: 'Pengguna', email: '', role: 'Mandor Lapangan', provider: 'guest' };
+  return { id: '', name: 'Pengguna', email: '', role: 'Viewer', provider: 'guest' };
 }
 export function saveStoredUser(user: UserProfile): void {
   localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
