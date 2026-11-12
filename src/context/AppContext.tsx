@@ -26,6 +26,7 @@ interface AppContextType {
   toggleTheme:()=>void;
   dataReady:boolean;
   dataError:string|null;
+  cashAccess:boolean;
 }
 const AppContext=createContext<AppContextType|undefined>(undefined);
 const THEME_KEY='proyek_cair_theme';
@@ -45,16 +46,18 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
  const [verifyingDocId,setVerifyingDocId]=useState<string|null>(null);
  const [dataReady,setDataReady]=useState(false);
  const [dataError,setDataError]=useState<string|null>(null);
+ const [cashAccess,setCashAccess]=useState(false);
  const [theme,setTheme]=useState<'light'|'dark'>(()=>{try{const v=localStorage.getItem(THEME_KEY);if(v==='dark'||v==='light')return v;}catch{}return 'dark';});
  useEffect(()=>{document.documentElement.classList.toggle('dark',theme==='dark');localStorage.setItem(THEME_KEY,theme);},[theme]);
  const toggleTheme=()=>setTheme(v=>v==='light'?'dark':'light');
  useEffect(()=>{const p=new URLSearchParams(window.location.search);const id=p.get('verify_doc');if(id){setVerifyingDocId(id);setCurrentView('verification');}},[]);
  const refreshData=async()=>{
   const client=getSupabaseClient();
+  const canReadCash=['admin','site_manager','finance','auditor'].includes(user.databaseRole||'');
   const [boqRes,stockRes,cashRes,docsRes]=await Promise.all([
    client.from('boq_items').select('*').eq('is_active',true).order('source_row'),
    client.from('inventory_transactions').select('*').order('occurred_at',{ascending:true}).order('created_at',{ascending:true}),
-   client.from('cash_transactions').select('*').order('occurred_at',{ascending:true}).order('created_at',{ascending:true}),
+   canReadCash?client.from('cash_transactions').select('*').order('occurred_at',{ascending:true}).order('created_at',{ascending:true}):Promise.resolve({data:[],error:null}),
    client.from('documents').select('*').order('created_at',{ascending:false})
   ]);
   if(boqRes.error)throw boqRes.error;
@@ -78,7 +81,7 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
    return {id:t.id,jenis:t.transaction_type,jumlah_rp:Number(t.amount),untuk_apa:t.description,kategori_keperluan:(t.category||'Lainnya') as MutasiKas['kategori_keperluan'],pic:t.pic||'-',nomor_kuitansi:t.reference_no||undefined,tanggal:t.occurred_at,saldo_setelah:cashBalance,catatan:t.notes||undefined};
   });
   const docs:DokumenLaporan[]=(docsRes.data||[]).map((d:any)=>({id:d.document_no,judul:d.title,jenis:d.document_type==='MUTASI_KAS'?'MUTASI_KAS':'MUTASI_STOK',periode_awal:d.period_start||'',periode_akhir:d.period_end||'',dibuat_pada:d.created_at,penandatangan_nama:d.signer_name||'',penandatangan_jabatan:d.signer_role||'',penandatangan_email:d.signer_email||'',hash_keamanan:d.content_sha256||'',total_transaksi:Number(d.total_transactions||0),ringkasan_nilai_rp:Number(d.amount_summary||0),qr_payload:d.qr_payload||'',snapshot_json:d.snapshot?JSON.stringify(d.snapshot):undefined}));
-  setItems(mappedItems);setStockMutations(stockRows.reverse());setCashMutations(cashRows.reverse());setDocuments(docs);setDataError(null);setDataReady(true);
+  setItems(mappedItems);setStockMutations(stockRows.reverse());setCashMutations(cashRows.reverse());setCashAccess(canReadCash);setDocuments(docs);setDataError(null);setDataReady(true);
  };
  useEffect(()=>{if(!user.id)return;let live=true;setDataReady(false);refreshData().catch((e:any)=>{if(live){setDataError(e.message||'Gagal memuat data dari Supabase.');setDataReady(true);}});return()=>{live=false;};},[user.id]);
  const addStockMutation=async(data:Omit<MutasiBarang,'id'|'stok_sebelum'|'stok_sesudah'>)=>{
@@ -98,6 +101,6 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
  const outOfStockCount=stockItems.filter(x=>x.stok_saat_ini<=0).length;
  const lowStockCount=stockItems.filter(x=>x.stok_saat_ini>0&&x.stok_saat_ini<=x.stok_minimum).length;
  const availableStockCount=stockItems.filter(x=>x.stok_saat_ini>x.stok_minimum).length;
- return <AppContext.Provider value={{items,stockMutations,cashMutations,documents,user,supabaseConfig,currentView,setCurrentView,verifyingDocId,setVerifyingDocId,addStockMutation,addCashMutation,addDocument,logout,totalStockAssetValue,currentCashBalance,outOfStockCount,lowStockCount,availableStockCount,theme,toggleTheme,dataReady,dataError}}>{children}</AppContext.Provider>;
+ return <AppContext.Provider value={{items,stockMutations,cashMutations,documents,user,supabaseConfig,currentView,setCurrentView,verifyingDocId,setVerifyingDocId,addStockMutation,addCashMutation,addDocument,logout,totalStockAssetValue,currentCashBalance,outOfStockCount,lowStockCount,availableStockCount,theme,toggleTheme,dataReady,dataError,cashAccess}}>{children}</AppContext.Provider>;
 };
 export const useApp=()=>{const c=useContext(AppContext);if(!c)throw new Error('useApp must be used within AppProvider');return c;};
