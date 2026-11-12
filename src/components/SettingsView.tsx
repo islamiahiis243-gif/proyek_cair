@@ -4,7 +4,7 @@ import {Database,ShieldCheck,LogOut,Sun,Moon,Download,CheckCircle2,AlertTriangle
 export const SettingsView:React.FC=()=>{
  const {user,logout,theme,toggleTheme,items,stockMutations,cashMutations,documents,supabaseConfig,dataReady,dataError,cashAccess}=useApp();
  const exportBackup=()=>{
-  const payload={project:'UDU - Proyek Cair',exported_at:new Date().toISOString(),source:'Supabase operational database',boq_items:items,inventory_transactions:stockMutations,cash_transactions:cashMutations,documents};
+  const payload={project:'UDU - Proyek Cair',exported_at:new Date().toISOString(),source:'Supabase operational database',cash_access:cashAccess,boq_items:items,inventory_transactions:stockMutations,cash_transactions:cashMutations,documents};
   const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
   const a=document.createElement('a');a.href=url;a.download=`UDU-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
  };
