@@ -31,8 +31,6 @@ export const ReportsView: React.FC = () => {
     return d.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
-  const [signerName, setSignerName] = useState(user.name);
-  const [signerRole, setSignerRole] = useState(user.role);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationSuccess, setGenerationSuccess] = useState<string | null>(null);
 
@@ -46,11 +44,6 @@ export const ReportsView: React.FC = () => {
       const dateTag = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const docId = `DOC-PC-${dateTag}-${String(docCounter).padStart(3, '0')}`;
 
-      const activeUser = {
-        ...user,
-        name: signerName.trim() || user.name,
-        role: signerRole as any,
-      };
 
       if (reportType === 'stock') {
         const filtered = stockMutations.filter((m) => {
@@ -64,10 +57,10 @@ export const ReportsView: React.FC = () => {
           startDate,
           endDate,
           mutations: filtered,
-          signer: activeUser,
+          signer: user,
         });
 
-        await await addDocument(newDoc);
+        await addDocument(newDoc);
         setGenerationSuccess(`Laporan Mutasi Barang (${docId}) berhasil dicetak dan diunduh.`);
       } else {
         const filtered = cashMutations.filter((c) => {
@@ -239,33 +232,8 @@ export const ReportsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Signer Info */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Nama Penandatangan Resmi (Site Manager / PIC)
-              </label>
-              <input
-                type="text"
-                required
-                value={signerName}
-                onChange={(e) => setSignerName(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Jabatan / Kedudukan Proyek
-              </label>
-              <input
-                type="text"
-                required
-                value={signerRole}
-                onChange={(e) => setSignerRole(e.target.value as any)}
-                className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
-              />
-            </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+            Penyusun laporan diambil otomatis dari akun yang sedang masuk: <strong>{user.name}</strong> ({user.email}) — role database: {user.role}. Nama dan jabatan tidak dapat diketik atau diganti pada formulir.
           </div>
 
           {/* Features info bar */}
@@ -273,7 +241,7 @@ export const ReportsView: React.FC = () => {
             <QrCode className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold text-slate-900 dark:text-white">Fitur QR Code Otomatis:</span>{' '}
-              Setiap kali dokumen PDF dibuat, sistem secara otomatis merender gambar QR Code beresolusi tinggi di pojok kanan bawah. Saat di-scan, QR Code tersebut mengarahkan pembaca ke Halaman Validasi Digital resmi untuk memastikan dokumen asli dan belum dimanipulasi.
+              QR Code mengarah ke registrasi laporan di aplikasi. Sistem memeriksa checksum snapshot transaksi yang tersimpan. Ini belum merupakan tanda tangan digital dan belum memverifikasi file PDF.
             </div>
           </div>
 
