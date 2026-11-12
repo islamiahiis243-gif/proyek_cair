@@ -103,12 +103,12 @@ export const ReportsView: React.FC = () => {
             Studio Laporan & Ekspor PDF
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Ekspor laporan resmi berkode QR verifikasi keaslian digital otomatis yang dicetak langsung di lembar dokumen PDF.
+            Ekspor laporan berdasarkan transaksi yang benar-benar tercatat, dengan QR registrasi dan checksum snapshot data.
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800/60">
           <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span>Tanda Tangan & QR Code Terverifikasi</span>
+          <span>QR Registrasi & Checksum Snapshot</span>
         </div>
       </div>
 
