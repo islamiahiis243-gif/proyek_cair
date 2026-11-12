@@ -1,6 +1,8 @@
 export type AvailabilityStatus = 'Belum Dicatat' | 'Tersedia' | 'Stok Menipis' | 'Tidak Tersedia';
 
 export interface ItemBarang {
+  parent_section_id?: string | null;
+  source_excel_row?: number | null;
   id: string;
   kode_boq: string;
   source_sheet?: string;
@@ -99,4 +101,8 @@ export interface SupabaseConfig {
   anonKey: string;
   isConnected: boolean;
   lastSynced?: string;
+}
+
+export interface BoqSection {
+  id:string; source_sheet:string; source_row:number; node_code:string; description:string; level:1|2|3; parent_id:string|null; sort_order:number; source_color:string; source_qty:number|null; source_uom:string|null; source_total_price:number|null; calculated_total_price:number; quantities_by_uom:Record<string,number>; item_count:number; source_total_variance:number;
 }
