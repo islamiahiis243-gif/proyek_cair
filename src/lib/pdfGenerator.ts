@@ -3,6 +3,11 @@ import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import { DokumenLaporan, ItemBarang, MutasiBarang, MutasiKas, UserProfile } from '../types';
 
+async function sha256Hex(value:string):Promise<string>{
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
 export function formatRupiah(value: number): string {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -73,6 +78,8 @@ export async function generateStockMutationPDF(params: {
   // Calculate stats
   const totalMasuk = mutations.filter((m) => m.jenis === 'MASUK').reduce((acc, m) => acc + m.jumlah, 0);
   const totalKeluar = mutations.filter((m) => m.jenis === 'KELUAR').reduce((acc, m) => acc + m.jumlah, 0);
+  const snapshot = JSON.stringify({document_type:'MUTASI_STOK',period_start:startDate,period_end:endDate,transactions:mutations.map(m=>({id:m.id,barang_id:m.barang_id,jenis:m.jenis,jumlah:m.jumlah,satuan:m.satuan,tujuan:m.tujuan_keperluan,pic:m.pic_penerima_penyerah,reference:m.nomor_surat_jalan||null,tanggal:m.tanggal,catatan:m.catatan||null}))});
+  const hash = await sha256Hex(snapshot);
 
   // Header Bar
   doc.setFillColor(15, 23, 42); // slate-900
@@ -91,7 +98,7 @@ export async function generateStockMutationPDF(params: {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(255, 255, 255);
-  doc.text('DOKUMEN RESMI', pageWidth - 14, 15, { align: 'right' });
+  doc.text('LAPORAN OPERASIONAL', pageWidth - 14, 15, { align: 'right' });
 
   // Document Title & Metadata Box
   doc.setTextColor(15, 23, 42);
@@ -205,7 +212,7 @@ export async function generateStockMutationPDF(params: {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Dibuat & Disahkan Oleh,', 14, signY);
+  doc.text('Disusun Oleh,', 14, signY);
   doc.text('Site Manager / Koordinator Lapangan', 14, signY + 4);
 
   doc.setFontSize(9);
@@ -219,16 +226,8 @@ export async function generateStockMutationPDF(params: {
   doc.text(`ID Akun: ${signer.email}`, 14, signY + 32);
 
   // Center column: Checker
-  doc.text('Penerima / Mandor Proyek,', 80, signY);
-  doc.text('Logistik Gudang Lapangan', 80, signY + 4);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text('Supriyadi / Budi Santoso', 80, signY + 28);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 116, 139);
-  doc.text('Gudang Material UDU', 80, signY + 32);
+  doc.text('Persetujuan Digital', 80, signY);
+  doc.text('Belum dicatat / belum disahkan', 80, signY + 4);
 
   // Right column: Digital QR Code Verification Box
   const qrBoxX = pageWidth - 60;
@@ -238,7 +237,7 @@ export async function generateStockMutationPDF(params: {
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(2, 132, 199); // sky-600
-  doc.text('TERVERIFIKASI DIGITAL', qrBoxX + 16 + qrSize / 2, signY + 28, { align: 'center' });
+  doc.text('QR REGISTRASI DATA', qrBoxX + 16 + qrSize / 2, signY + 28, { align: 'center' });
 
   doc.setFontSize(6.5);
   doc.setFont('helvetica', 'normal');
@@ -248,9 +247,8 @@ export async function generateStockMutationPDF(params: {
   // Security Checksum Hash footer
   doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184);
-  const hash = Math.random().toString(36).substring(2) + Date.now().toString(36);
   doc.text(
-    `Dokumen digital ini sah dan tersinkronisasi di Proyek Cair Cloud. SHA-256 Hash: ${hash}`,
+    `SHA-256 snapshot transaksi (bukan tanda tangan digital): ${hash}`,
     pageWidth / 2,
     pageHeight - 6,
     { align: 'center' }
@@ -273,6 +271,7 @@ export async function generateStockMutationPDF(params: {
     total_transaksi: mutations.length,
     ringkasan_nilai_rp: 0,
     qr_payload: verifyUrl,
+    snapshot_json: snapshot,
   };
 }
 
@@ -310,6 +309,8 @@ export async function generateCashflowPDF(params: {
   const totalIn = cashMutations.filter((m) => m.jenis === 'MASUK').reduce((acc, m) => acc + m.jumlah_rp, 0);
   const totalOut = cashMutations.filter((m) => m.jenis === 'KELUAR').reduce((acc, m) => acc + m.jumlah_rp, 0);
   const latestSaldo = cashMutations.length > 0 ? cashMutations[cashMutations.length - 1].saldo_setelah : totalIn - totalOut;
+  const snapshot = JSON.stringify({document_type:'MUTASI_KAS',period_start:startDate,period_end:endDate,transactions:cashMutations.map(m=>({id:m.id,jenis:m.jenis,jumlah_rp:m.jumlah_rp,untuk_apa:m.untuk_apa,kategori:m.kategori_keperluan,pic:m.pic,reference:m.nomor_kuitansi||null,tanggal:m.tanggal,saldo_setelah:m.saldo_setelah,catatan:m.catatan||null}))});
+  const hash = await sha256Hex(snapshot);
 
   // Header Bar
   doc.setFillColor(15, 23, 42);
@@ -328,7 +329,7 @@ export async function generateCashflowPDF(params: {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(255, 255, 255);
-  doc.text('BUKU KAS RESMI', pageWidth - 14, 15, { align: 'right' });
+  doc.text('LAPORAN OPERASIONAL', pageWidth - 14, 15, { align: 'right' });
 
   // Document Title & Metadata Box
   doc.setTextColor(15, 23, 42);
@@ -344,7 +345,7 @@ export async function generateCashflowPDF(params: {
   doc.text(`Periode Kas      : ${formatDateOnly(startDate)} s/d ${formatDateOnly(endDate)}`, 14, 46);
   doc.text(`Tanggal Cetak    : ${formatDateOnly(new Date().toISOString())}`, 14, 51);
 
-  doc.text(`Status Arus Kas : Terverifikasi Seimbang`, pageWidth - 14, 41, { align: 'right' });
+  doc.text(`Status Dokumen : DRAFT / BELUM DISAHKAN`, pageWidth - 14, 41, { align: 'right' });
   doc.text(`Penanggung Kas  : ${signer.name} (${signer.role})`, pageWidth - 14, 46, { align: 'right' });
   doc.text(`Email PIC       : ${signer.email}`, pageWidth - 14, 51, { align: 'right' });
 
@@ -448,7 +449,7 @@ export async function generateCashflowPDF(params: {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Dibuat & Diverifikasi Oleh,', 14, signY);
+  doc.text('Disusun Oleh,', 14, signY);
   doc.text('Bendahara / Site Finance Proyek', 14, signY + 4);
 
   doc.setFontSize(9);
@@ -461,16 +462,8 @@ export async function generateCashflowPDF(params: {
   doc.setTextColor(100, 116, 139);
   doc.text(`ID Akun: ${signer.email}`, 14, signY + 32);
 
-  doc.text('Mengetahui & Menyetujui,', 80, signY);
-  doc.text('Project Director / Owner Representative', 80, signY + 4);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text('Ir. Hendro Wijaya, ST', 80, signY + 28);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 116, 139);
-  doc.text('Trainer & UDU Project Office', 80, signY + 32);
+  doc.text('Persetujuan Digital', 80, signY);
+  doc.text('Belum dicatat / belum disahkan', 80, signY + 4);
 
   const qrBoxX = pageWidth - 60;
   const qrSize = 26;
@@ -479,18 +472,17 @@ export async function generateCashflowPDF(params: {
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(2, 132, 199);
-  doc.text('TERVERIFIKASI SAH', qrBoxX + 16 + qrSize / 2, signY + 28, { align: 'center' });
+  doc.text('QR REGISTRASI DATA', qrBoxX + 16 + qrSize / 2, signY + 28, { align: 'center' });
 
   doc.setFontSize(6.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(148, 163, 184);
   doc.text('Scan QR untuk validasi kas', qrBoxX + 16 + qrSize / 2, signY + 32, { align: 'center' });
 
-  const hash = Math.random().toString(36).substring(2) + Date.now().toString(36);
   doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184);
   doc.text(
-    `Buku Kas Digital Proyek Cair. Terverifikasi aman & terenkripsi. SHA-256: ${hash}`,
+    `SHA-256 snapshot transaksi (bukan tanda tangan digital): ${hash}`,
     pageWidth / 2,
     pageHeight - 6,
     { align: 'center' }
@@ -512,5 +504,6 @@ export async function generateCashflowPDF(params: {
     total_transaksi: cashMutations.length,
     ringkasan_nilai_rp: latestSaldo,
     qr_payload: verifyUrl,
+    snapshot_json: snapshot,
   };
 }
