@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseConfig, UserProfile } from '../types';
 
 const STORAGE_KEY_USER = 'proyek_cair_user';
-export const DEFAULT_USER: UserProfile = { id:'', name:'Pengguna', email:'', role:'Mandor Lapangan', provider:'guest' };
+export const DEFAULT_USER: UserProfile = { id:'', name:'Pengguna', email:'', role:'Viewer', provider:'guest' };
 const env = (import.meta as any).env || {};
 const SUPABASE_URL = env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_KEY = env.VITE_SUPABASE_ANON_KEY as string | undefined;
