@@ -10,6 +10,7 @@ import { ReportsView } from './components/ReportsView';
 import { VerificationPortal } from './components/VerificationPortal';
 import { SettingsView } from './components/SettingsView';
 import { ItemBarang, JenisMutasiBarang, JenisMutasiKas } from './types';
+import { AuthGate } from './components/AuthGate';
 
 const MainApp: React.FC = () => {
   const { currentView, setCurrentView } = useApp();
@@ -108,7 +109,7 @@ const MainApp: React.FC = () => {
 export default function App() {
   return (
     <AppProvider>
-      <MainApp />
+      <AuthGate><MainApp /></AuthGate>
     </AppProvider>
   );
 }
