@@ -46,7 +46,7 @@ export const Sidebar: React.FC = () => {
       id: 'reports',
       label: 'Laporan & Ekspor PDF',
       icon: FileText,
-      badge: 'QR Code',
+      badge: 'Checksum',
       badgeType: 'info',
     },
     {
@@ -73,7 +73,7 @@ export const Sidebar: React.FC = () => {
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xs font-semibold text-white truncate">Trainer & UDU Office</div>
-            <div className="text-[11px] text-slate-400 truncate">Master BOQ Kontraktor</div>
+            <div className="text-[11px] text-slate-400 truncate">Master BOQ • Sheet 1</div>
           </div>
         </div>
 
@@ -123,11 +123,11 @@ export const Sidebar: React.FC = () => {
       {/* Footer Info */}
       <div className="p-4 border-t border-slate-800 text-[11px] text-slate-500">
         <div className="flex items-center justify-between">
-          <span>Versi Sistem</span>
-          <span className="font-mono text-slate-400">v2.4-PROD</span>
+          <span>Sumber data</span>
+          <span className="font-mono text-slate-400">Supabase</span>
         </div>
         <div className="mt-1 text-[10px] text-slate-600">
-          Sinkronisasi cloud & offline-first
+          Data operasional tersimpan di database
         </div>
       </div>
     </aside>
