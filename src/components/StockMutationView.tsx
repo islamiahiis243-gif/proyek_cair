@@ -31,7 +31,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
   preselectedType,
   modalOnly = false,
 }) => {
-  const { items, stockMutations, addStockMutation, user } = useApp();
+  const { items, stockMutations, addStockMutation, user, stockWriteAccess } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'MASUK' | 'KELUAR'>('ALL');
@@ -131,6 +131,10 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
 
   if (modalOnly && !isModalOpen) {
     return null;
+  }
+
+  if (!stockWriteAccess) {
+    return modalOnly ? null : <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">Role akun ini hanya dapat melihat data stok. Izin mutasi stok memerlukan admin, site_manager, atau storekeeper.</div>;
   }
 
   return (
