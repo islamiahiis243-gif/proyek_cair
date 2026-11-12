@@ -32,6 +32,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     cashMutations,
     totalStockAssetValue,
     currentCashBalance,
+    cashAccess,
     outOfStockCount,
     lowStockCount,
     availableStockCount,
@@ -152,11 +153,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="mt-2 text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums">
-            {formatRupiah(currentCashBalance)}
+            {cashAccess?formatRupiah(currentCashBalance):'Akses terbatas'}
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-2">
-            <span>Masuk: {formatRupiah(totalCashIn)}</span>
-            <span>Keluar: {formatRupiah(totalCashOut)}</span>
+            <span>Masuk: {cashAccess?formatRupiah(totalCashIn):'—'}</span>
+            <span>Keluar: {cashAccess?formatRupiah(totalCashOut):'—'}</span>
           </div>
         </div>
 
@@ -309,7 +310,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="divide-y divide-slate-100 dark:divide-slate-800 flex-1">
             {cashMutations.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500">
-                Belum ada transaksi kas keuangan.
+                {cashAccess?'Belum ada transaksi kas.':'Data kas tidak tersedia untuk role akun ini.'}
               </div>
             ) : (
               cashMutations.slice(-5).reverse().map((c) => (
@@ -366,7 +367,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <h3 className="text-sm font-bold">Cetak Laporan Otomatis & QR Code Validasi</h3>
           </div>
           <p className="mt-1 text-xs text-slate-300 max-w-xl">
-            Buat laporan resmi format PDF A4 rapi yang dilengkapi tanda tangan digital penanggung jawab dan QR Code verifikasi keaslian dokumen.
+            Buat PDF dari transaksi nyata, dengan QR registrasi dan checksum snapshot data. Fitur ini bukan tanda tangan digital.
           </p>
         </div>
         <button
