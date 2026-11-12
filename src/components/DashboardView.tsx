@@ -33,6 +33,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     totalStockAssetValue,
     currentCashBalance,
     cashAccess,
+    cashWriteAccess,
+    stockWriteAccess,
     outOfStockCount,
     lowStockCount,
     availableStockCount,
@@ -83,6 +85,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Quick Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
+          {stockWriteAccess && <>
           <button
             onClick={() => onOpenStockModal('MASUK')}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
@@ -98,8 +101,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <ArrowUpRight className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
             <span>- Stok Keluar</span>
           </button>
+          </>}
 
-          {cashAccess && <>
+          {cashWriteAccess && <>
           <button
             onClick={() => onOpenCashModal('MASUK')}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800"
