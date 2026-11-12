@@ -81,7 +81,7 @@ export const Header: React.FC = () => {
           <span>Catat Mutasi</span>
         </button>
 
-        {user.provider === 'google' ? (
+        {user.id ? (
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <img
