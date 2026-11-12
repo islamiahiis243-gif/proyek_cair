@@ -69,7 +69,7 @@ export const AppProvider:React.FC<{children:React.ReactNode}>=({children})=>{
    const after=before+delta;balance.set(t.item_id,after);
    return {id:t.id,barang_id:t.item_id,nama_barang:'',jenis:incoming?'MASUK':'KELUAR',jumlah:Number(t.quantity),satuan:t.uom,tujuan_keperluan:t.location||t.notes||'-',pic_penerima_penyerah:t.counterparty||'-',nomor_surat_jalan:t.reference_no||undefined,tanggal:t.occurred_at,stok_sebelum:before,stok_sesudah:after,catatan:t.notes||undefined};
   });
-  const mappedItems:ItemBarang[]=(boqRes.data||[]).map((b:any)=>({id:b.id,kode_boq:b.boq_code,source_sheet:b.source_sheet,source_row:b.source_row,nama_barang:b.description,kategori:b.category||'Tanpa kategori',qty_boq:Number(b.quantity),satuan:b.uom,harga_satuan:Number(b.unit_rate||0),stok_saat_ini:balance.get(b.id)||0,stok_minimum:0,status:computeItemStatus(balance.get(b.id)||0,0),keterangan:b.remarks||''}));
+  const mappedItems:ItemBarang[]=(boqRes.data||[]).map((b:any)=>({id:b.id,kode_boq:b.boq_code,source_sheet:b.source_sheet,source_row:b.source_row,nama_barang:b.description,kategori:b.category||'Tanpa kategori',qty_boq:Number(b.quantity),is_stock_item:Boolean(b.is_stock_item),satuan:b.uom,harga_satuan:Number(b.unit_rate||0),stok_saat_ini:balance.get(b.id)||0,stok_minimum:0,status:computeItemStatus(balance.get(b.id)||0,0),keterangan:b.remarks||''}));
   const nameById=new Map(mappedItems.map(x=>[x.id,x.nama_barang]));
   stockRows.forEach(x=>{x.nama_barang=nameById.get(x.barang_id)||'Item BOQ';});
   let cashBalance=0;
