@@ -98,7 +98,7 @@ export async function generateStockMutationPDF(params: {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(148, 163, 184); // slate-400
-  doc.text('Sistem Mutasi Stok & Kas Lapangan Real-Time | Trainer & UDU Office', 14, 18);
+  doc.text('Kontrol BOQ, Mutasi Stok & Kas | Trainer & UDU Office', 14, 18);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
