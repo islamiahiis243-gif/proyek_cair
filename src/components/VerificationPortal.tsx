@@ -24,12 +24,25 @@ export const VerificationPortal: React.FC = () => {
   const [inputSearchDoc, setInputSearchDoc] = useState('');
   const [activeQrDataUrl, setActiveQrDataUrl] = useState<string>('');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [integrityStatus,setIntegrityStatus]=useState<'checking'|'valid'|'invalid'|'unavailable'>('unavailable');
 
   // Default to verifyingDocId or the first available document
   const activeDocId = verifyingDocId || documents[0]?.id || '';
   const currentDoc = documents.find((d) => d.id === activeDocId) || documents[0];
 
   useEffect(() => {
+    let active=true;
+    const verify=async()=>{
+      if(!currentDoc?.snapshot_json||!currentDoc.hash_keamanan){setIntegrityStatus('unavailable');return;}
+      try{
+        const parsed=JSON.parse(currentDoc.snapshot_json);
+        const stable=(value:any):string=>Array.isArray(value)?'['+value.map(stable).join(',')+']':value&&typeof value==='object'?'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}':JSON.stringify(value);
+        const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(stable(parsed)));
+        const hash=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+        if(active)setIntegrityStatus(hash===currentDoc.hash_keamanan?'valid':'invalid');
+      }catch{if(active)setIntegrityStatus('invalid');}
+    };
+    void verify();
     if (currentDoc) {
       const url = `${window.location.origin}/?verify_doc=${encodeURIComponent(currentDoc.id)}`;
       QRCode.toDataURL(url, {
@@ -38,6 +51,7 @@ export const VerificationPortal: React.FC = () => {
         color: { dark: '#0f172a', light: '#ffffff' },
       }).then(setActiveQrDataUrl);
     }
+    return ()=>{active=false;};
   }, [currentDoc]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -76,7 +90,7 @@ export const VerificationPortal: React.FC = () => {
               Portal Validasi Dokumen Digital
             </h1>
             <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-              Pemeriksaan keaslian Berita Acara Mutasi Barang dan Buku Kas resmi Proyek Cair.
+              Pemeriksaan checksum snapshot transaksi yang tersimpan di database UDU.
             </p>
           </div>
         </div>
@@ -114,10 +128,10 @@ export const VerificationPortal: React.FC = () => {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>DOKUMEN TERVERIFIKASI RESMI</span>
+                <span>{integrityStatus==='checking'?'MEMERIKSA CHECKSUM':integrityStatus==='valid'?'CHECKSUM DATA COCOK':integrityStatus==='invalid'?'CHECKSUM TIDAK COCOK':'CHECKSUM BELUM TERSEDIA'}</span>
               </div>
               <h2 className="text-2xl font-bold tracking-tight text-white">
-                Sertifikat Keabsahan Dokumen Digital
+                Registrasi Laporan & Pemeriksaan Integritas Data
               </h2>
               <div className="text-xs text-slate-400 flex items-center gap-2">
                 <Building2 className="w-3.5 h-3.5" />
@@ -177,7 +191,7 @@ export const VerificationPortal: React.FC = () => {
             <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4 bg-transparent">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
                 <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>Otoritas Penandatangan Digital</span>
+                <span>Identitas Penyusun Laporan</span>
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
@@ -203,15 +217,15 @@ export const VerificationPortal: React.FC = () => {
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-200 flex items-center gap-1.5">
                   <KeyRound className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Hash Integritas Kriptografis (SHA-256)</span>
+                  <span>SHA-256 Snapshot Transaksi</span>
                 </span>
-                <span className="text-[10px] text-emerald-400 font-mono">VALID & MATCHED</span>
+                <span className="text-[10px] text-slate-300 font-mono">{integrityStatus==='valid'?'MATCH':integrityStatus==='invalid'?'MISMATCH':'NOT VERIFIED'}</span>
               </div>
               <div className="text-[11px] font-mono text-slate-400 break-all bg-slate-950 dark:bg-black/60 p-2.5 rounded-lg border border-slate-800">
                 {currentDoc.hash_keamanan}
               </div>
               <div className="text-[10px] text-slate-400 dark:text-slate-500">
-                Hash di atas mengunci struktur data transaksi mutasi dan menjamin lembar PDF tidak mengalami pemalsuan atau perubahan setelah ditandatangani.
+                Checksum ini memeriksa kecocokan snapshot transaksi yang tersimpan di database. Ini BUKAN tanda tangan digital, tidak membuktikan identitas penandatangan, dan tidak memverifikasi byte file PDF.
               </div>
             </div>
 
