@@ -44,6 +44,9 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
   const [pic, setPic] = useState(user.name);
   const [suratJalan, setSuratJalan] = useState('');
   const [notes, setNotes] = useState('');
+  const [sourceName,setSourceName]=useState('');
+  const [destinationName,setDestinationName]=useState('');
+  const [ownerType,setOwnerType]=useState<'KONTRAKTOR'|'IMK'>('KONTRAKTOR');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Sync if preselected props change
@@ -85,6 +88,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
     setPic(user.name);
     setSuratJalan('');
     setNotes('');
+    setSourceName('');setDestinationName('');setOwnerType('KONTRAKTOR');
     setErrorMessage(null);
     setIsModalOpen(true);
   };
@@ -103,6 +107,8 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
       return;
     }
 
+    if (mutationType==='MASUK'&&!sourceName.trim()) { setErrorMessage('Asal barang / supplier wajib diisi.'); return; }
+    if (mutationType==='KELUAR'&&!destinationName.trim()) { setErrorMessage('Tujuan penggunaan / lokasi wajib diisi.'); return; }
     if (!purpose.trim()) {
       setErrorMessage('Tujuan / keperluan pemakaian barang wajib diisi!');
       return;
@@ -119,6 +125,11 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
       nomor_surat_jalan: suratJalan.trim() || undefined,
       tanggal: new Date().toISOString(),
       catatan: notes.trim() || undefined,
+      source_name: mutationType==='MASUK'?sourceName.trim():undefined,
+      destination_name: mutationType==='KELUAR'?destinationName.trim():undefined,
+      recipient_name: pic.trim()||user.name,
+      owner_type: ownerType,
+      purpose: purpose.trim(),
     });
 
     if (!res.success) {
@@ -216,7 +227,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                 <th className="py-3 px-3.5 text-center">Jenis</th>
                 <th className="py-3 px-3.5">Nama Material / Barang</th>
                 <th className="py-3 px-3.5 text-right font-bold">Kuantitas</th>
-                <th className="py-3 px-3.5">Tujuan & Lokasi Pemakaian</th>
+                <th className="py-3 px-3.5">Asal / Tujuan Barang</th>
                 <th className="py-3 px-3.5">Penanggung Jawab (PIC)</th>
                 <th className="py-3 px-3.5 text-center">No. Ref / Bon</th>
                 <th className="py-3 px-3.5 text-right">Perubahan Stok</th>
@@ -261,7 +272,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                       <span className="text-[11px] text-slate-400 dark:text-slate-500 font-normal">{mut.satuan}</span>
                     </td>
                     <td className="py-3 px-3.5 text-slate-700 dark:text-slate-300 max-w-xs truncate">
-                      {mut.tujuan_keperluan}
+                      {mut.source_name||mut.destination_name||mut.tujuan_keperluan}
                     </td>
                     <td className="py-3 px-3.5 text-slate-700 dark:text-slate-300">
                       {mut.pic_penerima_penyerah}
@@ -392,6 +403,11 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block"><span className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Kepemilikan material *</span><select value={ownerType} onChange={e=>setOwnerType(e.target.value as any)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800"><option value="KONTRAKTOR">By Kontraktor</option><option value="IMK">By IMK</option></select></label>
+                {mutationType==='MASUK'?<label className="block"><span className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Asal barang / supplier *</span><input required value={sourceName} onChange={e=>setSourceName(e.target.value)} placeholder="Nama supplier / asal" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800"/></label>:<label className="block"><span className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Tujuan / lokasi penggunaan *</span><input required value={destinationName} onChange={e=>setDestinationName(e.target.value)} placeholder="Area kerja / lokasi tujuan" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800"/></label>}
+              </div>
+
               {/* Purpose */}
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -410,7 +426,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
               {/* PIC & Surat Jalan */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">PIC / Penerima</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Nama pihak pengirim / penerima</label>
                   <input
                     type="text"
                     value={pic}
