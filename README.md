@@ -28,7 +28,7 @@ Jangan membuat transaksi awal, saldo, kuitansi, laporan, progres, atau insiden f
 
 ## Autentikasi dan izin
 
-Frontend menggunakan Supabase Auth. Profil baru otomatis dibuat dengan role awal `viewer`.
+Frontend menggunakan Supabase Auth. Profil baru otomatis dibuat dengan role awal `viewer`. Bootstrap akun admin pertama dilakukan manual oleh pemilik proyek menggunakan skrip `supabase/ops/bootstrap_first_admin.sql`; skrip hanya berisi placeholder UUID, bukan identitas akun.
 
 - Mutasi stok: `admin`, `site_manager`, `storekeeper`.
 - Baca buku kas: `admin`, `site_manager`, `finance`, `auditor`.
