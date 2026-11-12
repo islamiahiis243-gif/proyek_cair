@@ -72,7 +72,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </h1>
             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Real-time Active
+              Data Supabase
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -125,7 +125,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               Otomasi Status Stok Aktif: {outOfStockCount} item berstatus "Tidak Tersedia" (stok = 0).
             </span>{' '}
             <span className="text-amber-800 dark:text-amber-300/80">
-              Item master BOQ kontraktor diinisialisasi pada kuantitas 0. Saat barang diterima di lokasi proyek via menu{' '}
+              Item master BOQ diinisialisasi pada kuantitas 0. Saat barang diterima di lokasi proyek via menu{' '}
               <strong className="underline cursor-pointer" onClick={() => onOpenStockModal('MASUK')}>
                 Mutasi Masuk
               </strong>
