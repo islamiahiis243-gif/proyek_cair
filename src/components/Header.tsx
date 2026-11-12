@@ -46,7 +46,7 @@ export const Header: React.FC = () => {
           {supabaseConfig.isConnected ? (
             <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
               <CloudCheck className="w-3.5 h-3.5" />
-              <span>Cloud Sync Aktif</span>
+              <span>Database Supabase</span>
             </span>
           ) : (
             <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
@@ -85,7 +85,7 @@ export const Header: React.FC = () => {
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <img
-                src={user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=ProyekCair'}
+                src={user.avatar_url || 'https://api.dicebear.com/7.x/initials/svg?seed=UDU'}
                 alt={user.name}
                 className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
               />
