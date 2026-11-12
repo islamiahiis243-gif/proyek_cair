@@ -48,6 +48,7 @@ export interface MutasiBarang {
   owner_type?: 'KONTRAKTOR'|'IMK';
   purpose?: string;
   addition_id?: string;
+  created_by_name?: string;
 }
 
 export type JenisMutasiKas = 'MASUK' | 'KELUAR';
