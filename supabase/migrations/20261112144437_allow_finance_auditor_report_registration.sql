@@ -1,0 +1,2 @@
+drop policy if exists documents_insert_authorized on public.documents;
+create policy documents_insert_authorized on public.documents for insert to authenticated with check(public.current_user_role() in ('admin','site_manager','finance','auditor'));
