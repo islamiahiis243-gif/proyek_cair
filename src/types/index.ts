@@ -9,6 +9,7 @@ export interface ItemBarang {
   kategori: string;
   satuan: string;
   qty_boq: number;
+  is_stock_item: boolean;
   harga_satuan: number;
   stok_saat_ini: number;
   stok_minimum: number;
