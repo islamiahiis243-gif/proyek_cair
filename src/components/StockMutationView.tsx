@@ -31,7 +31,8 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
   preselectedType,
   modalOnly = false,
 }) => {
-  const { items, stockMutations, addStockMutation, user, stockWriteAccess } = useApp();
+  const { items, stockMutations, addStockMutation, reverseStockMutation, user, stockWriteAccess } = useApp();
+  const canReverse=['admin','site_manager'].includes(user.databaseRole||'');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'MASUK' | 'KELUAR'>('ALL');
@@ -231,12 +232,13 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                 <th className="py-3 px-3.5">Penanggung Jawab (PIC)</th>
                 <th className="py-3 px-3.5 text-center">No. Ref / Bon</th>
                 <th className="py-3 px-3.5 text-right">Perubahan Stok</th>
+                <th className="py-3 px-3.5">Koreksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredMutations.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={11} className="py-12 text-center text-slate-400 dark:text-slate-500">
                     Belum ada riwayat mutasi barang sesuai filter.
                   </td>
                 </tr>
@@ -282,6 +284,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                     <td className="py-3 px-3.5 text-right font-mono text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
                       {mut.stok_sebelum} → <span className="font-bold text-slate-900 dark:text-white">{mut.stok_sesudah}</span> {mut.satuan}
                     </td>
+                    <td className="py-3 px-3.5">{canReverse?<button onClick={async()=>{const reason=window.prompt('Alasan pembatalan/koreksi transaksi ini:');if(reason?.trim()){const result=await reverseStockMutation(mut.id,reason.trim());if(!result.success)window.alert(result.message);else window.alert(result.message);}}} className="rounded border border-amber-300 px-2 py-1 text-[10px] font-semibold text-amber-700 hover:bg-amber-50">Balikkan</button>:<span className="text-[10px] text-slate-400">—</span>}</td>
                   </tr>
                 ))
               )}
