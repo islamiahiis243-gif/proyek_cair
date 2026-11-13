@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 1.0
+- **Versi:** 1.1
 - **Tanggal:** 2026-11-13
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -71,21 +71,97 @@ Aturan:
 
 ### 3.2 Company Super Admin
 
-Setiap perusahaan dapat memiliki satu atau lebih Company Super Admin. Mereka dapat:
-- mengundang pengguna ke perusahaannya;
-- menentukan persona/role yang boleh diberikan berdasarkan katalog dan kebijakan platform;
-- menetapkan cakupan proyek;
-- menetapkan authority bisnis dalam batas yang diizinkan;
-- mengubah atau mencabut keanggotaan dan persona pengguna;
-- mengelola administrator perusahaan lain jika kebijakan perusahaan mengizinkan;
-- melihat audit aktivitas dalam batas tenant perusahaannya.
+Setiap perusahaan dapat memiliki satu atau lebih Company Super Admin. Mereka merupakan administrator tertinggi pada tenant perusahaan masing-masing. Jumlah lebih dari satu diperbolehkan agar tata kelola perusahaan tidak bergantung pada satu akun; setiap penunjukan dan pencabutan harus eksplisit, dibatasi kebijakan platform, dan diaudit.
 
-Batasan:
-- Company Super Admin hanya berwenang pada tenant perusahaannya.
-- Tidak dapat membaca atau mengelola data tenant lain tanpa hubungan dan izin yang sah.
-- Tidak dapat membuat atau menaikkan siapa pun menjadi Platform Super Admin.
-- Tidak dapat memberikan permission atau authority di luar batas maksimum yang ditetapkan platform.
-- Perubahan hak akses dan administrasi harus masuk audit trail.
+**Fasilitas administrasi:** Company Super Admin difasilitasi melalui **ProyekCair Console**, yaitu pusat administrasi dan tata kelola perusahaan di dalam platform ProyekCair. Console bukan aplikasi terpisah, bukan identity provider terpisah, dan tidak menggunakan akun login khusus. Console menggunakan User Identity, authentication session, membership, persona, dan mekanisme otorisasi yang sama dengan aplikasi operasional.
+
+ProyekCair Console harus diperlakukan sebagai **Company Governance Control Center**, bukan sekadar halaman pengaturan profil atau manajemen akun.
+
+#### 3.2.1 Tujuan dan batas Console
+
+Console menyediakan sarana bagi Company Super Admin untuk mengatur struktur organisasi, keanggotaan, kapasitas kerja, hak akses, kewenangan bisnis, dan tata kelola proyek dalam tenant yang menjadi tanggung jawabnya.
+
+Console hanya mengelola company/tenant yang sedang dipilih dan telah divalidasi server. Memiliki akses ke Console pada satu perusahaan tidak memberikan akses ke Console atau data perusahaan lain.
+
+Console dan aplikasi operasional merupakan dua area pengalaman dalam satu platform:
+- **Aplikasi operasional** digunakan untuk menjalankan pekerjaan sehari-hari pada proyek dan modul bisnis sesuai persona/permission.
+- **ProyekCair Console** digunakan untuk administrasi dan governance perusahaan.
+- **Platform Administration** digunakan Platform Super Admin untuk kebijakan dan pengelolaan lintas tenant.
+
+Rute UI yang disarankan (bukan kontrak URL permanen):
+- `/console` — Company Console untuk tenant aktif;
+- `/platform` — area administrasi Platform Super Admin;
+- aplikasi operasional tetap berada pada area aplikasi utama.
+
+Implementasi boleh menggunakan layout, route group, atau navigasi yang berbeda, tetapi tidak boleh membuat sistem autentikasi atau sumber otorisasi yang terpisah.
+
+#### 3.2.2 Kapabilitas minimum Company Console
+
+| Area Console | Kapabilitas yang harus difasilitasi | Batasan |
+|---|---|---|
+| **Company Profile** | Melihat dan mengelola profil perusahaan, nama legal, NPWP, alamat, kontak, dokumen legal, serta status verifikasi sesuai kebijakan. | Perubahan identifier legal dan status verifikasi dapat memerlukan validasi atau persetujuan Platform Administration. |
+| **User & Membership Management** | Melihat daftar anggota, status membership, mengundang anggota, menangguhkan, mengaktifkan kembali, dan mencabut membership. | Hanya anggota tenant sendiri; tidak dapat mengubah User Identity global atau membership tenant lain. |
+| **Invitation Center** | Membuat undangan, menentukan penerima, persona/role awal, project scope, masa berlaku dan batas penggunaan; melihat status redemption; mencabut undangan. | Undangan tidak dapat memberikan privilege melebihi kewenangan pembuat atau policy platform. |
+| **Persona Management** | Menetapkan, mengubah, dan mencabut persona anggota; mengelola assignment dan scope persona. | Hanya persona yang tersedia/diizinkan katalog dan policy platform. |
+| **Role & Permission Governance** | Menetapkan role yang diizinkan kepada persona/membership dan melihat permission efektif. | Tidak boleh menciptakan atau memberikan permission di luar katalog/guardrail platform. Perubahan katalog permission global hanya Platform Super Admin. |
+| **Project Access** | Mengelola keanggotaan proyek, penugasan, dan cakupan akses anggota dalam proyek perusahaan. | Tidak boleh memberikan akses ke proyek atau resource tenant lain. |
+| **Authority Management** | Mengatur limit nominal, kategori transaksi, tingkat persetujuan, dan kewenangan bisnis sesuai delegasi yang diizinkan. | Tidak dapat melampaui batas maksimum platform atau mendelegasikan authority yang tidak dimiliki. |
+| **Approval Matrix** | Mengatur pejabat/role approver, tahapan persetujuan, pemisahan tugas, dan jalur eskalasi sesuai fitur yang diaktifkan. | Kebijakan harus divalidasi backend; pembuat transaksi tidak otomatis menjadi approver transaksi yang sama jika segregation of duties diwajibkan. |
+| **Audit Trail** | Menelusuri aktivitas administrasi, perubahan akses, undangan, perubahan authority, dan peristiwa keamanan dalam tenant. | Audit tidak dapat dihapus atau dimodifikasi oleh Company Super Admin; akses hanya sesuai scope tenant dan kebijakan retensi. |
+| **Security & Access Review** | Melihat ringkasan status akses, membership yang ditangguhkan, undangan aktif, serta melakukan review akses berkala. | Tidak boleh menampilkan secret, token, atau kredensial autentikasi. Pengelolaan sesi mengikuti kemampuan security platform. |
+
+Kapabilitas dapat dirilis bertahap. Namun, batas tenant, server-side authorization, audit trail, dan perlindungan privilege merupakan persyaratan dasar sejak kapabilitas terkait mulai tersedia.
+
+#### 3.2.3 Delegasi administrator
+
+- Satu perusahaan boleh menunjuk lebih dari satu Company Super Admin.
+- Company Super Admin dapat menunjuk Company Super Admin lain hanya jika kebijakan platform mengizinkan dan tindakan tersebut dilakukan melalui alur eksplisit yang diaudit.
+- Perusahaan dapat memiliki administrator terbatas, misalnya Membership Administrator, Project Administrator, Persona Administrator, atau Auditor, tanpa memberikan seluruh kewenangan Company Super Admin.
+- Katalog kewenangan administrator terbatas ditetapkan platform dan dapat dikonfigurasi dalam batas policy.
+- Perubahan administrator tidak boleh menyebabkan perusahaan kehilangan seluruh administrator aktif tanpa alur pemulihan yang disetujui.
+- Company Super Admin tidak dapat menunjuk atau mengubah Platform Super Admin.
+
+#### 3.2.4 Aturan akses dan keamanan Console
+
+1. Akses ke Console harus memerlukan autentikasi valid, membership aktif pada tenant yang dipilih, serta permission administrasi yang sesuai.
+2. Keberadaan menu atau route Console pada frontend bukan bukti otorisasi. Setiap pembacaan dan mutasi harus diperiksa ulang di backend/database.
+3. Tenant/company ID, persona aktif, role, dan authority yang dikirim client tidak boleh dipercaya sebelum divalidasi terhadap identitas dan relasi yang tersimpan.
+4. Seluruh query dan mutasi Console harus dibatasi ke tenant yang berwenang; RLS dan server-side authorization harus menerapkan default deny.
+5. Company Super Admin hanya boleh memberikan role, persona, project scope, dan authority yang berada di dalam batas delegasi efektif miliknya dan guardrail platform.
+6. Perubahan sensitif seperti menunjuk/mencabut administrator, mengubah approval matrix, atau menaikkan authority harus mencatat aktor, target, nilai sebelum/sesudah, alasan, waktu, dan hasil.
+7. Pencabutan membership, persona, role, atau delegasi harus berlaku pada permintaan berikutnya setelah validasi ulang; jangan mengandalkan klaim JWT lama.
+8. Operasi yang gagal karena tidak berwenang harus ditolak dan, untuk peristiwa sensitif, dicatat sebagai denied event.
+9. Console tidak boleh menyediakan fungsi untuk melihat password, OAuth token, service-role key, atau secret milik pengguna.
+10. Tindakan administratif yang berdampak besar dapat mensyaratkan konfirmasi ulang, alasan wajib, atau persetujuan pihak kedua sesuai risk policy.
+
+#### 3.2.5 Relasi Console dengan persona operasional
+
+Company Super Admin juga dapat memiliki persona operasional di perusahaan yang sama, misalnya Project Manager, Finance, Procurement, atau Data Inputter. Peran administrasi perusahaan dan persona operasional harus tetap dibedakan:
+- hak Company Super Admin berasal dari delegasi administrasi tenant;
+- pekerjaan operasional dijalankan dalam persona operasional yang dipilih;
+- pergantian persona tidak boleh mengubah identitas asli;
+- setiap tindakan harus mencatat identitas aktor dan konteks persona/administrasi yang benar;
+- hak administrasi tidak boleh otomatis diberikan kepada semua persona operasional.
+
+Platform Owner juga dapat menggunakan Console atau persona operasional melalui identitas yang sama, tetapi otoritas Platform Super Admin tetap merupakan otoritas platform yang terpisah dan tidak boleh disamarkan sebagai hak Company Super Admin.
+
+#### 3.2.6 Perbandingan batas kewenangan
+
+| Kemampuan | Company Super Admin | Platform Super Admin |
+|---|:---:|:---:|
+| Mengelola profil perusahaan sendiri | Ya, sesuai policy | Ya |
+| Mengundang dan mengelola anggota perusahaan sendiri | Ya | Ya, sesuai kebijakan platform |
+| Mengelola persona dan role yang diizinkan pada tenant sendiri | Ya | Ya |
+| Mengatur akses proyek tenant sendiri | Ya | Ya |
+| Mengatur authority dalam batas delegasi | Ya | Ya |
+| Melihat audit tenant sendiri | Ya | Ya, sesuai kebijakan |
+| Melihat atau mengelola tenant lain | Tidak | Sesuai policy dan kebutuhan tugas |
+| Menunjuk Company Super Admin pada tenant sendiri | Jika policy mengizinkan | Ya |
+| Menunjuk Platform Super Admin | Tidak | Hanya melalui prosedur platform khusus |
+| Mengubah katalog permission/policy global | Tidak | Ya |
+| Mengubah guardrail global dan konfigurasi platform | Tidak | Ya |
+
+**Aturan normatif:** ProyekCair Console adalah permukaan administrasi tenant, bukan sumber kebenaran otorisasi. Sumber kebenaran tetap berada pada data membership, persona assignment, role-permission, policy, authority, relasi scope, dan pemeriksaan backend/database.
 
 ### 3.3 Administrator dan pengguna perusahaan
 
@@ -362,6 +438,8 @@ Audit log harus append-only bagi pengguna aplikasi biasa. Koreksi administratif 
 - Selalu tampilkan indikator perusahaan/persona aktif pada area UI yang mudah terlihat.
 - Context switch harus memuat ulang data dan permission untuk konteks baru serta membersihkan state tenant sebelumnya.
 - Menu frontend boleh disesuaikan dengan permission untuk pengalaman pengguna, tetapi backend/database tetap menjadi penegak akses yang sebenarnya.
+- Pengguna dengan delegasi administrasi tenant dapat membuka ProyekCair Console pada tenant tersebut; pengguna tanpa permission administrasi tidak boleh mengakses data atau fungsi Console hanya dengan mengetahui URL.
+- Console dan aplikasi operasional menggunakan identitas autentikasi serta sumber otorisasi yang sama; context switch antara keduanya harus mempertahankan dan memvalidasi tenant/persona aktif.
 - Jika persona dicabut saat pengguna sedang aktif, operasi berikutnya harus ditolak setelah validasi ulang dan sesi/konteks perlu diperbarui.
 
 ## 14. Prinsip implementasi dan migrasi
@@ -393,14 +471,17 @@ Rancangan dianggap terimplementasi dengan benar jika pengujian membuktikan bahwa
 4. Satu identity dapat memiliki beberapa persona dalam satu perusahaan.
 5. Persona dan permission di satu perusahaan tidak memberikan akses ke perusahaan lain.
 6. Context switching memvalidasi ulang membership, persona, project scope, dan permission di server.
-7. Company Super Admin dapat mengelola pengguna hanya dalam tenant sendiri.
-8. Company Super Admin tidak dapat memberikan Platform Super Admin atau melampaui batas policy platform.
-9. Platform Owner dapat memiliki persona operasional tambahan tanpa kehilangan identitas maupun otoritas platform.
-10. Pencabutan/suspensi membership atau persona membuat akses terkait ditolak pada permintaan berikutnya setelah validasi.
-11. Approval limit dan authority policy ditegakkan pada backend, bukan hanya UI.
-12. Semua tindakan administrasi dan mutasi sensitif memiliki audit trail yang dapat ditelusuri.
-13. Uji negatif membuktikan pengguna tidak dapat mengakses tenant/resource lain dengan memanipulasi request, ID, JWT claim, atau state frontend.
-14. RLS dan server-side authorization diuji pada jalur akses langsung maupun RPC.
+7. Company Super Admin dapat mengelola pengguna hanya dalam tenant sendiri melalui ProyekCair Console dan tidak dapat menembus batas tenant.
+8. ProyekCair Console menggunakan identitas autentikasi yang sama dengan aplikasi operasional dan setiap endpoint Console menerapkan pemeriksaan backend/database.
+9. Company Super Admin dapat mengelola invitation, persona, role yang diizinkan, project scope, authority, dan approval matrix hanya dalam batas delegasi dan policy platform.
+10. Delegasi administrator dan perubahan sensitif Console tercatat lengkap dalam audit trail.
+11. Company Super Admin tidak dapat memberikan Platform Super Admin atau melampaui batas policy platform.
+12. Platform Owner dapat memiliki persona operasional tambahan tanpa kehilangan identitas maupun otoritas platform.
+13. Pencabutan/suspensi membership atau persona membuat akses terkait ditolak pada permintaan berikutnya setelah validasi.
+14. Approval limit dan authority policy ditegakkan pada backend, bukan hanya UI.
+15. Semua tindakan administrasi dan mutasi sensitif memiliki audit trail yang dapat ditelusuri.
+16. Uji negatif membuktikan pengguna tidak dapat mengakses tenant/resource lain dengan memanipulasi request, ID, JWT claim, atau state frontend.
+17. RLS dan server-side authorization diuji pada jalur akses langsung maupun RPC.
 
 ## 16. Keputusan yang masih perlu dikonfirmasi
 
