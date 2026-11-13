@@ -50,6 +50,10 @@ Istilah berikut harus digunakan secara konsisten dalam kode, database, API, UI, 
 
 ### 3.1 Platform Super Admin (Platform Owner)
 
+**Platform Owner yang ditetapkan:** `islamiahiis243@gmail.com`
+
+Email di atas adalah identitas login Google/email yang ditetapkan sebagai pemilik utama platform. Saat bootstrap dan setiap autentikasi, sistem wajib mencocokkan identitas provider yang telah diverifikasi dengan alamat email tersebut sebelum memberikan otoritas Platform Super Admin. Alamat email ini adalah penetapan identitas pemilik, bukan password, secret, atau mekanisme autentikasi tersendiri. Perubahan pemilik utama harus melalui prosedur pemulihan/pengalihan kepemilikan platform yang eksplisit, terlindungi, dan tercatat dalam audit trail.
+
 Platform Super Admin adalah pemilik dan otoritas tertinggi platform. Kewenangannya mencakup:
 - mengelola konfigurasi dan kebijakan global platform;
 - mengelola registrasi dan status perusahaan;
