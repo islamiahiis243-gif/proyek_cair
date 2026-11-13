@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 2.0
+- **Versi:** 2.1
 - **Tanggal:** 2026-11-13
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -48,7 +48,7 @@ Istilah berikut harus digunakan secara konsisten dalam kode, database, API, UI, 
 | **Company Super Admin** | Administrator tertinggi pada satu perusahaan, terbatas pada tenant perusahaannya sendiri. |
 | **Pihak Terkait (penunjukan kewenangan)** | User Identity yang telah memiliki Company Membership aktif dan Employee Record pada perusahaan yang menunjuknya, lalu secara eksplisit ditetapkan Company Super Admin sebagai pihak yang berwenang melakukan TTE/pengesahan QR untuk dokumen dan scope tertentu. Penunjukan harus terkait persona, authority, dan masa berlaku yang sah. Pihak eksternal tanpa akun ProyekCair atau tanpa membership pada perusahaan tersebut tidak dapat menjadi final signatory. |
 | **Orang Terkait (relasi orang–perusahaan)** | Catatan hubungan seseorang dengan perusahaan dalam kapasitas legal, kepemilikan, pengendalian, atau manfaat, misalnya pendiri, direktur/CEO, pemegang saham, atau penerima manfaat (*beneficial owner*). Orang tersebut dapat sama sekali tidak mengetahui, menggunakan, atau memiliki akun di ProyekCair; pencatatannya tidak mensyaratkan User Identity, login, membership, persona, atau aktivitas di aplikasi. Konsep ini berbeda dari penunjukan Pihak Terkait sebagai penandatangan. Fitur ini belum termasuk cakupan implementasi saat ini. |
-| **Audit Trail** | Catatan append-only atas aktivitas dan perubahan penting yang dapat ditelusuri. |
+| **RFIN** | Kode/credential kewenangan kriptografis internal ProyekCair pada tingkat perusahaan, yang terkait dengan identitas, membership, persona, scope, dan kewenangan pengguna. RFIN bukan password login, bukan NPWP, dan bukan pengganti autentikasi User Identity. Detail format dan protokol kriptografinya ditetapkan oleh RFIN Engine. |\n| **RFIN Engine** | Komponen khusus untuk provisioning, pengelolaan, validasi, rotasi/pencabutan, dan pemeriksaan penggunaan RFIN secara aman, tenant-isolated, dan teraudit. |\n| **TTE/QR Privat** | Mekanisme pengesahan/tanda tangan elektronik internal ProyekCair yang akses, tindakan, dan verifikasinya dibatasi untuk pengguna berwenang dalam tenant/scope terkait; bukan layanan verifikasi publik. |\n| **Audit Trail** | Catatan append-only atas aktivitas dan perubahan penting yang dapat ditelusuri. |
 
 **Pembedaan wajib:** Persona bukan sinonim Role. Persona menggambarkan kapasitas/konteks yang dipilih; role mengelompokkan izin; permission adalah izin atomik; authority mengatur batas kewenangan bisnis.
 
@@ -127,7 +127,6 @@ Rute UI yang disarankan (bukan kontrak URL permanen):
 Company Console menjadi pusat tata kelola dan pengawasan, bukan tempat Company Super Admin mengambil alih pekerjaan operasional. Console dapat menyediakan tampilan baca, filter, drill-down, dan audit aktivitas operasional. Hak audit tidak otomatis memberi hak membuat, mengubah, menghapus, memeriksa, atau menyetujui transaksi.
 
 #### 3.2.4 Pengaturan role dan wewenang pengguna undangan
-
 Company Super Admin dapat mengatur role dan wewenang orang yang diundang melalui dua pendekatan:
 - **Default/template:** memilih template persona atau role bawaan ProyekCair, misalnya Project Manager, Site Engineer, Procurement, Finance, Storekeeper, HSE Officer, Document Controller, atau Viewer.
 - **Custom:** menyesuaikan kombinasi role, permission, project scope, dan authority sesuai struktur serta kebutuhan perusahaan.
@@ -257,8 +256,7 @@ Ketentuan:
 - Contoh tersebut bukan struktur wajib/universal. Perusahaan dapat menambah, mengurangi, mengganti nama, atau mengurutkan jabatan.
 - Struktur proyek lapangan dapat berakhir pada Manager/KTT/Project Manager; jabatan di atasnya dapat berada pada struktur Head Office atau tata kelola korporat.
 - Jabatan/position, departemen/unit, dan relasi atasan-bawahan memiliki ID internal auto-generated serta riwayat masa berlaku.
-- Penempatan karyawan dapat berbeda menurut perusahaan, departemen, proyek, lokasi, dan periode.- Atasan langsung dan rantai pelaporan disimpan sebagai relasi organisasi dengan effective date, bukan disimpulkan hanya dari nama jabatan.
-- Posisi direktur dengan lingkup berbeda (misalnya Direktur Operasional dan Direktur Keuangan) harus dapat dibedakan.
+- Penempatan karyawan dapat berbeda menurut perusahaan, departemen, proyek, lokasi, dan periode.- Atasan langsung dan rantai pelaporan disimpan sebagai relasi organisasi dengan effective date, bukan disimpulkan hanya dari nama jabatan.- Posisi direktur dengan lingkup berbeda (misalnya Direktur Operasional dan Direktur Keuangan) harus dapat dibedakan.
 - Perubahan struktur, jabatan, departemen, atasan, atau penempatan tidak boleh mengubah snapshot histori aktivitas terdahulu.
 
 ### Pembedaan jabatan, persona, role, permission, dan authority
@@ -310,7 +308,7 @@ Persetujuan dokumen/data mengikuti **alur serial (berurutan)** berdasarkan tangg
 - Contoh konseptual: seseorang yang memiliki otoritas menandatangani dokumen tertentu melalui Coretax pada beberapa perusahaan dapat dianalogikan sebagai pihak yang ditunjuk masing-masing Company Super Admin ProyekCair untuk mengesahkan jenis dokumen tertentu pada tenant mereka. **Coretax hanya contoh pola penunjukan lintas perusahaan; ProyekCair tidak mengklaim integrasi, afiliasi, atau kesetaraan kewenangan perpajakan dengan Coretax/DJP.**
 - Penunjukan lintas perusahaan tidak memberikan akses otomatis ke tenant lain, tidak memperluas kewenangan ke semua dokumen, dan tidak menggantikan proses persetujuan serial internal perusahaan. Otoritas final signatory selalu spesifik pada perusahaan dan scope penunjukannya.
 - Penetapan, perubahan, penangguhan, pencabutan, dan penggunaan kewenangan final signatory wajib dicatat dalam audit trail, termasuk pihak yang menunjuk, pihak yang ditunjuk, tenant, jenis dokumen, scope, authority, masa berlaku, dan waktu tindakan.
-- Final signatory baru dapat melakukan pengesahan setelah seluruh tahap persetujuan serial yang diwajibkan selesai dan dokumen berada pada versi final yang disetujui. QR harus terikat pada dokumen/versi final, identitas penandatangan, waktu pengesahan, dan mekanisme verifikasi publik/internal.
+- Final signatory baru dapat melakukan pengesahan setelah seluruh tahap persetujuan serial yang diwajibkan selesai dan dokumen berada pada versi final yang disetujui. QR harus terikat pada dokumen/versi final, identitas penandatangan, waktu pengesahan, dan mekanisme verifikasi privat untuk pengguna yang berwenang. QR/TTE merupakan FYEO/Privat untuk kebutuhan B2B; tidak menyediakan pemindaian atau verifikasi publik tanpa autentikasi dan otorisasi tenant.
 - Perubahan atau pembatalan dokumen setelah diterbitkan/ditandatangani tidak boleh menghapus histori atau mengubah dokumen lama secara diam-diam. Untuk lifecycle dokumen, gunakan event/status **BATAL** (membatalkan dokumen/versi yang berlaku) dan **GANTI** (menerbitkan dokumen pengganti yang merujuk dokumen yang dibatalkan), mengikuti prinsip jejak faktur Coretax sebagai analogi pencatatan. Dokumen lama, versi, QR, alasan pembatalan, pelaku, waktu, dan relasi ke dokumen pengganti tetap tersimpan serta dapat diaudit. QR pada dokumen yang berstatus BATAL harus ditampilkan tidak berlaku; dokumen pengganti menjalani workflow dan pengesahan sesuai ketentuan.
 - Istilah BATAL/GANTI adalah aturan lifecycle dokumen ProyekCair, bukan klaim bahwa dokumen ProyekCair merupakan faktur pajak atau terintegrasi dengan Coretax.
 - QR merupakan bukti verifikasi/pengesahan dokumen dalam ProyekCair; jangan menyebutnya tanda tangan elektronik tersertifikasi atau mengklaim kekuatan hukum tertentu kecuali integrasi dan persyaratan hukum terkait benar-benar dipenuhi.
@@ -387,8 +385,7 @@ Tidak ada pendaftaran publik yang otomatis membuat tenant aktif atau memberikan 
 
 1. Pengguna login menggunakan Google atau email.
 2. Server mengenali atau membuat User Identity berdasarkan identitas provider yang tervalidasi.
-3. Pengguna menerima invitation dari Company Super Admin.
-4. Pengguna membuka undangan dan melakukan redeem menggunakan identitas personalnya.
+3. Pengguna menerima invitation dari Company Super Admin.4. Pengguna membuka undangan dan melakukan redeem menggunakan identitas personalnya.
 5. Server memvalidasi kode, status, masa berlaku, batas penggunaan, perusahaan tujuan, dan ketentuan email/identitas penerima.6. Jika valid, server membuat atau mengaktifkan Company Membership dan memberikan persona/role/project scope/authority sesuai konfigurasi undangan.
 7. Sistem mencatat penerimaan undangan dan perubahan membership ke audit trail.
 8. Pengguna memilih perusahaan dan persona aktif untuk memulai pekerjaan.
@@ -509,6 +506,39 @@ Jika salah satu pemeriksaan wajib gagal, keputusan adalah **DENY** (default deny
 
 ## 8. Persona, role, permission, dan authority
 
+### 8.1 RFIN Engine dan pengendalian akses RFIN
+
+ProyekCair menggunakan istilah **RFIN** (bukan EFIN) untuk credential/kode kewenangan kriptografis internal perusahaan. RFIN adalah konsep keamanan khusus ProyekCair; analogi EFIN sebelumnya tidak berarti integrasi, afiliasi, atau kesetaraan dengan DJP/Coretax.
+
+- RFIN harus ditangani oleh **RFIN Engine** khusus, bukan sebagai field teks biasa atau sekadar kode yang diperiksa di frontend.
+- RFIN terikat pada perusahaan/tenant dan konteks kewenangan yang ditetapkan: User Identity, Company Membership, persona, role/permission, authority, dan scope.
+- Company Super Admin menetapkan secara eksplisit pengguna mana yang boleh melihat/mengakses informasi atau material RFIN, untuk perusahaan dan scope apa. Hak ini tidak otomatis diberikan kepada seluruh anggota, final signatory, approver, atau pemegang TTE/QR.
+- Hak membaca/mengakses RFIN harus dibedakan dari hak membuat, menerbitkan, merotasi, mencabut, atau menggunakan RFIN. Setiap kemampuan merupakan permission terpisah dan hanya diberikan bila memang diperlukan.
+- RFIN bukan password login, bukan NPWP, bukan pengganti autentikasi, dan tidak boleh dipakai sebagai shared credential untuk menghindari identifikasi aktor.
+- Material rahasia/kriptografis RFIN tidak boleh disimpan atau dikirim sebagai plaintext, ditampilkan pada log, atau diekspos ke frontend tanpa kebutuhan yang sah. Engine wajib menerapkan kontrol kriptografi, tenant isolation, validasi server-side, proteksi secret/key, pencatatan penggunaan, serta prosedur rotasi dan pencabutan.
+- Spesifikasi algoritma, format token, lifecycle key, custody, recovery, dan protokol kriptografi harus dirancang serta ditinjau tersendiri sebelum implementasi; SSOT ini menetapkan kebutuhan kontrol, bukan memilih algoritma atau format yang belum disepakati.
+
+### 8.2 Permission terpisah untuk approval, TTE/QR, dan scan
+
+Kemampuan berikut **tidak boleh digabung menjadi satu permission**:
+
+- **Approval action** — mengklik/menjalankan persetujuan pada tahapan workflow yang menjadi giliran pengguna, sesuai persona, authority, dan scope.
+- **TTE/QR signing** — melakukan pengesahan akhir atau penerbitan QR untuk dokumen final yang memenuhi seluruh prasyarat.
+- **QR scan/verification** — memindai atau menjalankan verifikasi QR dan melihat hasil verifikasi/dokumen sesuai hak akses.
+- **RFIN read/access** — membaca atau mengakses RFIN sesuai penetapan khusus Company Super Admin.
+- **RFIN administration/use** — administrasi atau penggunaan fungsi RFIN yang harus diberikan terpisah sesuai kebutuhan.
+
+Satu pengguna dapat diberi hak approval dan TTE/QR signing tetapi **tidak diberi dan tidak boleh menggunakan hak QR scan/verification**. Sebaliknya, hak scan/verifikasi tidak memberikan hak approval, TTE/QR signing, atau akses RFIN. Company Super Admin menetapkan kombinasi permission, tenant, jenis dokumen, proyek/departemen, dan scope yang berlaku untuk setiap pengguna.
+
+Backend/API/RLS harus menegakkan pemisahan tersebut; menyembunyikan tombol scan pada UI tidak cukup. Endpoint scan/verifikasi harus memeriksa permission khusus document.qr.scan atau permission setara, membership aktif, persona/konteks, tenant, serta scope dokumen. Tidak boleh ada fallback ke endpoint publik yang memungkinkan pengguna tanpa hak membaca status atau isi dokumen.
+
+### 8.3 TTE/QR sebagai layanan FYEO/Privat B2B
+
+- TTE/QR ProyekCair bersifat **FYEO/Privat** untuk hubungan B2B. Pemindaian dan verifikasi hanya tersedia bagi User Identity yang telah terautentikasi dan diberi hak oleh perusahaan terkait.
+- Tidak ada public QR verification page atau akses anonim yang mengungkap validitas, isi, metadata, atau status dokumen. Jika dibutuhkan pembagian dokumen kepada pihak lain, harus ada mekanisme berbagi privat yang eksplisit, terbatas, dapat dicabut, dan teraudit; bukan akses publik bawaan.
+- QR mengacu pada dokumen/versi/hash yang disahkan. Perubahan atau event BATAL/GANTI membuat QR/endorsement versi lama ditandai tidak berlaku di dalam kanal verifikasi privat.
+- Audit mencatat aktor dan permission yang digunakan untuk approval, signing, scan, dan verification secara terpisah.
+
 - Persona adalah konteks kerja yang terlihat dan dipilih pengguna.
 - Satu persona dapat dipetakan ke satu atau lebih role.
 - Role memiliki satu atau lebih permission.
@@ -517,7 +547,6 @@ Jika salah satu pemeriksaan wajib gagal, keputusan adalah **DENY** (default deny
 - Authority dapat mencakup limit nominal, jenis transaksi, tahapan persetujuan, proyek, atau kategori dokumen.
 - Persona/role bawaan adalah template. Company Super Admin dapat mengelola pemberian persona dalam batas katalog dan policy platform.
 - Custom persona/role perusahaan dapat dipertimbangkan pada fase lanjutan, tetapi harus tetap tersusun dari permission yang diizinkan platform dan tidak dapat memperluas privilege secara diam-diam.
-
 ## 9. Status lifecycle
 ### 9.1 User Identity
 Status identitas (misalnya active, disabled) mengatur apakah pengguna dapat melakukan autentikasi/akses platform. Status ini terpisah dari membership.
@@ -612,7 +641,7 @@ Untuk workflow dan pengesahan dokumen, audit juga harus mencatat:
 - SLA/due date yang berlaku pada saat tahap dimulai, reminder, escalation, delegation/substitution, serta alasan keterlambatan;
 - penunjukan final signatory: pihak yang menunjuk, pihak yang ditunjuk, tenant, jenis dokumen, scope, authority, masa berlaku, status, dan histori perubahan;
 - final signing event: identitas penandatangan, versi/hash dokumen yang disahkan, waktu pengesahan, identitas QR/verifikasi, serta status validitas pengesahan;
-- verification event: waktu verifikasi, referensi dokumen/versi, hasil pemeriksaan, dan kanal verifikasi tanpa membocorkan data yang tidak semestinya.
+- verification/scan event privat: waktu, User Identity, membership, persona, permission, tenant, referensi dokumen/versi, hasil pemeriksaan, dan kanal verifikasi; akses serta hasilnya tidak boleh membocorkan data kepada pihak yang tidak berwenang.
 
 Audit wajib mencakup sekurang-kurangnya login dan kegagalan akses yang relevan, provisioning/aktivasi Company Super Admin, invitation dan redemption, perubahan membership/persona/role/permission/authority, perubahan struktur organisasi dan penempatan, CRUD/import/export, transaksi, approval/rejection/return, penerbitan/revisi/pembatalan dokumen, final signing, verifikasi QR, serta tindakan administratif Platform Owner.
 
