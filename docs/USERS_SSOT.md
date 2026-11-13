@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 1.3
+- **Versi:** 1.4
 - **Tanggal:** 2026-11-13
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -107,7 +107,6 @@ Rute UI yang disarankan (bukan kontrak URL permanen):
 - `/console` — Console perusahaan untuk Company Super Admin;
 - `/platform` — administrasi global khusus Platform Super Admin;
 - area aplikasi utama — modul operasional sesuai akses pengguna.
-
 #### 3.2.3 Isi dan fungsi Company Console
 
 | Menu Console | Fungsi |
@@ -217,8 +216,7 @@ Setiap orang yang dicatat sebagai karyawan perusahaan harus memiliki Employee Re
 - `company_id` adalah ID internal tenant/perusahaan.
 - `employee_id` adalah ID internal record kepegawaian orang tersebut di satu perusahaan.
 - `employee_number` adalah NIK/nomor induk karyawan yang ditetapkan atau diberikan oleh perusahaan masing-masing. Nilainya diinput/dikelola melalui administrasi perusahaan, bukan dibuat otomatis oleh ProyekCair.
-- Format `employee_number` mengikuti sistem perusahaan, misalnya `00125`, `MM-00125`, atau `EMP/OPS/025`; format tidak diasumsikan seragam.
-- Terapkan keunikan `UNIQUE(company_id, employee_number)`. Nilai yang sama boleh digunakan oleh perusahaan berbeda.
+- Format `employee_number` mengikuti sistem perusahaan, misalnya `00125`, `MM-00125`, atau `EMP/OPS/025`; format tidak diasumsikan seragam.- Terapkan keunikan `UNIQUE(company_id, employee_number)`. Nilai yang sama boleh digunakan oleh perusahaan berbeda.
 - `employee_number` bukan username, password, secret, atau kredensial autentikasi.
 - Satu User Identity yang bekerja pada beberapa perusahaan memiliki Employee Record dan employee_number masing-masing pada setiap perusahaan.
 - Pegawai yang keluar tidak dihapus secara fisik jika telah memiliki histori; statusnya diakhiri/nonaktif dan histori dipertahankan.
@@ -287,9 +285,33 @@ Worker / Foreman
 
 Tahap dapat berupa draft, submit, review, verify, approve, reject, return for revision, resubmit, dan close. Tidak semua proses harus melewati semua jabatan. Head Office dapat memiliki approval chain berbeda. Workflow harus memeriksa penugasan organisasi dan authority saat tindakan dilakukan; jabatan saja tidak cukup.
 
-Setiap workflow instance dan step memiliki ID internal auto-generated. Setiap keputusan tahap menyimpan aktor, user_id, company_id, employee_id, employee_number saat itu (jika tersedia), persona aktif, snapshot jabatan/position, departemen, proyek, tindakan, waktu, catatan/alasan, hasil, dan referensi dokumen/transaksi. Pengulangan tahap menghasilkan event baru; histori tahap sebelumnya tidak ditimpa.
+Setiap workflow instance dan step memiliki ID internal auto-generated. Setiap keputusan tahap menyimpan aktor, user_id, company_id, employee_id, employee_number saat itu (jika tersedia), persona aktif, snapshot jabatan/position, departemen, proyek, tindakan, waktu, catatan/alasan, hasil, SLA/due date, dan referensi dokumen/transaksi. Pengulangan tahap menghasilkan event baru; histori tahap sebelumnya tidak ditimpa. Tahap approval bersifat serial; akses melihat dapat diberikan lebih awal secara paralel, tetapi tombol/tindakan approval hanya aktif pada tahap yang sedang berjalan.
 
 Contoh kategori workflow: laporan progres harian/mingguan, permintaan dan pengeluaran material, transaksi keuangan/pengajuan pembayaran, laporan K3, dokumen resmi, dan perubahan BOQ. Workflow Builder harus dibatasi katalog permission dan guardrail platform.
+
+### 5.2.1 Persetujuan berurutan, penandatangan akhir, dan QR
+
+Persetujuan dokumen/data mengikuti **alur serial (berurutan)** berdasarkan tangga/hierarki organisasi dan aturan workflow yang berlaku. Persetujuan paralel untuk beberapa tahap/pejabat pada satu rantai approval tidak diperbolehkan. Pengguna yang berada pada tahap berikutnya boleh melihat dokumen/data secara paralel (read-only sesuai akses), tetapi tindakan persetujuan hanya dibuka ketika giliran tahapnya aktif dan seluruh tahap sebelumnya telah selesai.
+
+- Setiap tahap yang diwajibkan harus ditindaklanjuti satu per satu sesuai urutan workflow, misalnya Foreman/Worker → Supervisor → Superintendent → Manager/KTT/Project Manager. Rantai Head Office dapat berbeda sesuai struktur dan kebijakan perusahaan.
+- Pengguna pada tahap aktif meninjau dokumen/data, lalu melakukan tindakan eksplisit melalui aplikasi: approve/agree, reject, atau return for revision sesuai hak dan kebijakan. Klik persetujuan merupakan persetujuan elektronik internal yang tercatat; bukan tanda tangan QR.
+- **QR/tanda tangan pengesahan hanya diterbitkan untuk penandatangan akhir (final signatory) pada tingkat tertinggi yang ditetapkan untuk jenis dokumen/formulir/kontrak tersebut.** Tidak semua reviewer/approver membubuhkan tanda tangan QR.
+- Company Super Admin Console menyediakan konfigurasi penandatangan akhir berdasarkan jenis dokumen, perusahaan/proyek/departemen, dan konteks kewenangan. Platform dapat menyediakan default/template dan guardrail. Penunjukan harus merujuk pada identitas pengguna/employee record yang sah, jabatan, persona/role, authority, dan scope; bukan sekadar nama bebas.
+- Contoh: pengguna A dapat ditetapkan sebagai penandatangan akhir untuk jenis laporan, formulir, atau kontrak tertentu. Penetapan tersebut tidak otomatis menjadikannya penandatangan untuk semua jenis dokumen atau semua proyek.
+- Final signatory baru dapat melakukan pengesahan setelah seluruh tahap persetujuan serial yang diwajibkan selesai dan dokumen berada pada versi final yang disetujui. QR harus terikat pada dokumen/versi final, identitas penandatangan, waktu pengesahan, dan mekanisme verifikasi publik/internal. Perubahan dokumen setelah pengesahan harus membatalkan/menandai QR lama tidak berlaku dan memerlukan proses revisi serta pengesahan ulang.
+- QR merupakan bukti verifikasi/pengesahan dokumen dalam ProyekCair; jangan menyebutnya tanda tangan elektronik tersertifikasi atau mengklaim kekuatan hukum tertentu kecuali integrasi dan persyaratan hukum terkait benar-benar dipenuhi.
+
+### 5.2.2 SLA tindakan, notifikasi, dan eskalasi
+
+Setiap tahap workflow yang membutuhkan tindakan harus memiliki batas waktu/SLA yang ditetapkan oleh template atau konfigurasi workflow. SLA dapat berbeda menurut jenis dokumen/transaksi dan urgensi, misalnya maksimal 1 hari, 2 hari, atau 1 minggu.
+
+- Saat item masuk ke antrean seorang approver/reviewer, aplikasi mengirim notifikasi yang memuat jenis dokumen/data, referensi, proyek/departemen, tindakan yang diminta, tanggal/waktu jatuh tempo, dan sisa waktu.
+- Dashboard dan daftar tugas menampilkan status menunggu tindakan, prioritas, due date, serta indikator terlambat.
+- Pengingat dikirim sebelum tenggat dan/atau saat tenggat terlewati sesuai kebijakan notifikasi.
+- Jika tenggat terlewati, aplikasi menandai overdue dan menjalankan aturan eskalasi yang telah dikonfigurasi, misalnya mengingatkan atasan/level berikutnya atau administrator terkait. Eskalasi tidak boleh diam-diam dianggap sebagai persetujuan otomatis.
+- Dokumen tetap mengikuti urutan serial. Notifikasi kepada pihak berikutnya atau atasan untuk awareness/escalation tidak membuka hak approve sebelum gilirannya, kecuali terdapat mekanisme delegasi/pengganti resmi yang sah, tercatat, dan tervalidasi.
+- SLA, reminder, escalation, delegation/substitution, alasan keterlambatan, serta seluruh tindakan harus masuk audit trail. Perubahan SLA setelah workflow berjalan tidak boleh menghapus jejak SLA yang berlaku ketika tahap dimulai.
+- Workflow dapat menetapkan SLA khusus untuk keputusan berdampak operasional tinggi, misalnya permintaan penambahan quantity item yang melebihi BOQ. Kasus tersebut dapat diberi tenggat singkat (contohnya 1–2 hari) agar keputusan tidak menghambat pekerjaan, sesuai kebijakan perusahaan dan tingkat risikonya.
 
 ## 5.3 Pengawasan operasional dalam Company Console
 
@@ -328,7 +350,6 @@ Ketentuan:
 - Tidak boleh ada perpindahan konteks hanya dengan mengubah parameter client-side tanpa validasi server.
 
 ## 6. Onboarding dan invitation-only membership
-
 ### 6.1 Prinsip
 
 Autentikasi berhasil tidak berarti pengguna otomatis memperoleh akses ke data perusahaan. Ada dua jalur provisioning yang berbeda:
@@ -437,8 +458,7 @@ ABAC membatasi keputusan berdasarkan atribut/kondisi seperti:
 - project ID;
 - status membership;
 - status proyek atau dokumen;
-- nilai transaksi dan approval limit;
-- status/verifikasi perusahaan;
+- nilai transaksi dan approval limit;- status/verifikasi perusahaan;
 - pemilik atau pembuat resource;
 - waktu atau kondisi operasional jika benar-benar diperlukan.
 
@@ -558,120 +578,3 @@ Gunakan foreign key, unique constraint, check constraint, dan indeks yang sesuai
 Audit log untuk aktivitas sensitif minimal mencatat:
 - actor user identity;
 - company/tenant;
-- persona aktif;
-- role/permission context bila relevan;
-- project/resource scope;
-- action dan target resource;
-- hasil (success/denied/failure);
-- timestamp;
-- sumber permintaan/session/correlation ID bila tersedia;
-- alasan perubahan untuk tindakan administrasi.
-
-Peristiwa yang wajib diaudit antara lain:
-- pembuatan, pengiriman, redemption, dan pencabutan invitation;
-- penambahan/pencabutan membership;
-- pemberian/perubahan/pencabutan persona dan role;
-- perubahan permission dan authority policy;
-- perubahan Company Super Admin;
-- perubahan status/verifikasi perusahaan;
-- pergantian persona/perusahaan jika relevan untuk jejak keamanan;
-- tindakan privileged dan percobaan akses yang ditolak;
-- CRUD dan perubahan data penting pada modul barang, keuangan, progres, K3, dokumen, dan modul operasional lain;
-- import, export, restore, void, koreksi, dan penghapusan;
-- pemeriksaan, verifikasi, persetujuan, penolakan, pengembalian untuk revisi, dan pengajuan ulang;
-- perubahan employee_number, status kepegawaian, jabatan, departemen, atasan, dan penempatan proyek.
-
-Audit log harus append-only bagi seluruh pengguna tenant, termasuk Company Super Admin. Koreksi dilakukan melalui event baru, bukan menghapus jejak lama. Untuk mutasi data, simpan nilai sebelum/sesudah atau diff relevan, target resource, alasan, correlation/request ID, sumber/session/device bila tersedia, dan hasil tindakan. Pencatatan READ diterapkan selektif pada data sensitif/akses berisiko. Snapshot identitas, jabatan, dan penempatan pada waktu event harus immutable sehingga perubahan di masa depan tidak mengubah histori lama.
-
-## 13. UX dan perilaku aplikasi
-
-- Setelah login, tampilkan perusahaan dan persona yang dapat dipilih pengguna.
-- Jika hanya ada satu konteks aktif, aplikasi boleh memilihnya otomatis, tetapi tetap menampilkan konteks yang sedang digunakan.
-- Jika belum ada membership, tampilkan onboarding undangan; jangan tampilkan data tenant.
-- Selalu tampilkan indikator perusahaan/persona aktif pada area UI yang mudah terlihat.
-- Context switch harus memuat ulang data dan permission untuk konteks baru serta membersihkan state tenant sebelumnya.
-- Menu frontend boleh disesuaikan dengan permission untuk pengalaman pengguna, tetapi backend/database tetap menjadi penegak akses yang sebenarnya.
-- Pengguna dengan delegasi administrasi tenant dapat membuka ProyekCair Console pada tenant tersebut; pengguna tanpa permission administrasi tidak boleh mengakses data atau fungsi Console hanya dengan mengetahui URL.
-- Console dan aplikasi operasional menggunakan identitas autentikasi serta sumber otorisasi yang sama; context switch antara keduanya harus mempertahankan dan memvalidasi tenant/persona aktif.
-- Jika persona dicabut saat pengguna sedang aktif, operasi berikutnya harus ditolak setelah validasi ulang dan sesi/konteks perlu diperbarui.
-- Detail karyawan menampilkan employee_number, status, departemen, jabatan, atasan, penempatan proyek, persona/role, dan riwayat mutasi.
-- Audit dapat difilter berdasarkan waktu, employee_number, pengguna, departemen, jabatan, proyek, modul, tindakan CRUD, status workflow, dan resource.
-- Detail dokumen/transaksi menampilkan timeline pembuat, pemeriksa, verifier, approver, catatan, revisi, dan status setiap tahap.
-
-## 14. Prinsip implementasi dan migrasi
-
-Sebelum implementasi:
-1. Audit skema database, Supabase Auth, profil pengguna, tabel role yang ada, RLS, RPC, dan seluruh pemeriksaan akses di frontend/backend.
-2. Petakan struktur yang sudah ada ke konsep dalam dokumen ini.
-3. Identifikasi konflik, duplikasi, dan jalur akses yang masih mengandalkan frontend.
-4. Rancang migrasi bertahap yang mempertahankan data dan akses operasional yang sah.
-5. Tentukan mekanisme bootstrap Platform Owner berdasarkan identitas yang telah diverifikasi; jangan menebak email atau ID.
-6. Uji tenant isolation, privilege escalation, invitation redemption race, pencabutan akses, dan audit trail sebelum rilis.
-
-Urutan fase yang disarankan:
-- **Fase 1 — Identity & Membership:** identitas, registry perusahaan, membership, invite-only onboarding.
-- **Fase 2 — Persona & Context:** persona assignment dan context switching.
-- **Fase 3 — Authorization:** role-permission, ABAC constraints, project scope, server-side enforcement/RLS.
-- **Fase 4 — Company Administration:** Company Super Admin, invitation management, authority policies.
-- **Fase 5 — Advanced Governance:** custom roles/personas terbatas, ACL khusus, approval workflows, audit analytics.
-
-Jangan mengubah atau menghapus kontrol keamanan database yang sudah ada hanya untuk menyesuaikan rancangan ini tanpa audit dampak dan alasan teknis. Setiap temuan keamanan lama harus ditangani sebagai pekerjaan terpisah dan terencana.
-
-## 15. Kriteria penerimaan (acceptance criteria)
-
-Rancangan dianggap terimplementasi dengan benar jika pengujian membuktikan bahwa:
-
-1. Pengguna dapat login dengan provider yang didukung, tetapi tanpa membership aktif tidak dapat membaca atau mengubah data tenant.
-2. Kode undangan valid hanya dapat digunakan sesuai penerima, expiry, status, dan batas penggunaan.
-3. Satu identity dapat menjadi anggota lebih dari satu perusahaan tanpa membuat akun autentikasi duplikat.
-4. Satu identity dapat memiliki beberapa persona dalam satu perusahaan.
-5. Persona dan permission di satu perusahaan tidak memberikan akses ke perusahaan lain.
-6. Context switching memvalidasi ulang membership, persona, project scope, dan permission di server.
-7. Setiap tenant memiliki tepat satu kursi Company Super Admin aktif yang diprovisioning oleh Platform Super Admin setelah permohonan resmi dan verifikasi perusahaan.
-8. NPWP berfungsi sebagai identifier perusahaan, sedangkan kode aktivasi hanya digunakan untuk klaim awal kursi Company Super Admin dan tidak menjadi password permanen.
-9. Company Super Admin mengakses Console untuk pengaturan perusahaan, undangan anggota, konfigurasi role/wewenang default atau custom, dan melihat histori/audit tenant.
-10. ProyekCair Console menggunakan identitas personal terverifikasi yang terikat ke kursi Company Super Admin dan setiap endpoint Console menerapkan pemeriksaan backend/database.
-11. Company Super Admin dapat mengundang anggota dan mengatur role/wewenang default atau custom hanya dalam batas policy platform.
-12. Tidak ada invitation anggota yang dapat menciptakan Company Super Admin kedua.
-13. Transfer/pemulihan kursi Company Super Admin dilakukan oleh Platform Owner/operator berwenang dan seluruh prosesnya diaudit.
-14. Company Super Admin tidak dapat memberikan Platform Super Admin atau melampaui batas policy platform.
-15. Platform Owner dapat memiliki persona operasional tambahan tanpa kehilangan identitas maupun otoritas platform.
-16. Pencabutan/suspensi membership atau persona membuat akses terkait ditolak pada permintaan berikutnya setelah validasi.17. Approval limit dan authority policy ditegakkan pada backend, bukan hanya UI.
-18. Semua tindakan administrasi dan mutasi sensitif memiliki audit trail yang dapat ditelusuri.
-19. Uji negatif membuktikan pengguna tidak dapat mengakses tenant/resource lain dengan memanipulasi request, ID, JWT claim, atau state frontend.
-20. RLS dan server-side authorization diuji pada jalur akses langsung maupun RPC.
-21. Setiap Employee Record memiliki employee_id auto-generated dan employee_number yang berasal dari perusahaan.
-22. employee_number unik dalam satu company_id, boleh sama antarperusahaan, dan tidak digunakan sebagai kredensial login atau foreign key.
-23. Seluruh ID internal ProyekCair auto-generated di backend/database; client tidak dapat menentukan ID otoritatif.
-24. Satu User Identity dapat memiliki Employee Record berbeda di beberapa perusahaan tanpa akun autentikasi duplikat.
-25. Struktur Head Office dan proyek lapangan dapat dikonfigurasi terpisah; jabatan, departemen, atasan, dan penempatan memiliki histori.
-26. Jabatan struktural, persona, role, permission, dan authority dipisahkan dan tidak memberi privilege otomatis satu sama lain.
-27. Workflow dapat berbeda menurut proses, departemen, proyek, nominal, dan authority.
-28. Setiap tahap workflow menyimpan aktor dan konteks kepegawaian/persona/organisasi saat tindakan dilakukan.
-29. Audit dapat menelusuri CRUD, import/export, koreksi, void/delete, pemeriksaan, persetujuan, dan revisi pada modul operasional.
-30. Perubahan jabatan, employee_number, departemen, atasan, atau proyek tidak mengubah snapshot histori audit terdahulu.
-31. Company Super Admin dapat meninjau aktivitas tenant tanpa otomatis memperoleh hak operasional untuk mengubah atau menyetujui transaksi.
-
-## 16. Keputusan yang masih perlu dikonfirmasi
-
-Dokumen ini menetapkan prinsip arsitektur, tetapi beberapa detail kebijakan operasional perlu diputuskan sebelum implementasi final:
-- proses verifikasi legal perusahaan dan NPWP;
-- apakah setiap undangan selalu wajib terikat email;
-- apakah perusahaan dapat mengatur custom persona/role atau hanya memilih katalog platform;
-- prosedur verifikasi perwakilan perusahaan dan kanal resmi untuk provisioning Company Super Admin;
-- prosedur transfer/pemulihan kursi Company Super Admin tunggal;
-- aturan pengganti/pemulihan Platform Owner jika akun utama tidak dapat diakses;
-- struktur approval berjenjang dan limit nominal per jenis transaksi;
-- masa berlaku membership dan kebijakan review akses berkala.
-
-Keputusan detail tersebut tidak boleh mengubah prinsip dasar multi-tenant, multi-persona, least privilege, default deny, dan auditability.
-
----
-
-## Ringkasan normatif
-
-**UDU menggunakan arsitektur multi-tenant dengan satu identitas autentikasi per orang, keanggotaan lintas perusahaan, multi-persona per keanggotaan, serta otorisasi hybrid RBAC + ABAC + ReBAC.**
-
-Platform Super Admin mengelola platform; Company Super Admin mengelola tenant perusahaannya. Pengguna login dengan Google/email, sedangkan NPWP mengidentifikasi perusahaan dan kode undangan mengotorisasi proses bergabung. Setiap company_id dan seluruh ID teknis internal dibuat otomatis oleh aplikasi. Setiap karyawan memiliki employee_id internal otomatis dan employee_number/NIK yang ditetapkan perusahaan, unik dalam lingkup company_id. Struktur Head Office dan proyek lapangan dapat berbeda dan dikonfigurasi. Jabatan struktural terpisah dari persona, role, permission, dan authority. Workflow dapat dikonfigurasi menurut proses dan konteks. Audit trail mengikat aktivitas ke user, company, employee_number bila tersedia, jabatan/organisasi saat kejadian, persona, proyek, resource, perubahan, serta histori pemeriksaan dan persetujuan.
-
-**Tidak ada akses tenant tanpa membership yang sah, tidak ada eskalasi privilege melalui undangan perusahaan, dan tidak ada keputusan otorisasi yang hanya ditegakkan oleh frontend.**
