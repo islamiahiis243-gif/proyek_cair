@@ -91,7 +91,6 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
   const handleSubmitCash = async (e: React.FormEvent) => {
     e.preventDefault();
     if(submitting)return;
-    setSubmitting(true);
     setErrorMessage(null);
 
     if (amount <= 0) {
@@ -104,6 +103,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
       return;
     }
 
+    setSubmitting(true);
     try { const res = await addCashMutation({
       jenis,
       jumlah_rp: Number(amount),
