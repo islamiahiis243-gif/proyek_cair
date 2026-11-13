@@ -49,6 +49,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
   const [destinationName,setDestinationName]=useState('');
   const [ownerType,setOwnerType]=useState<'KONTRAKTOR'|'IMK'>('KONTRAKTOR');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submitting,setSubmitting]=useState(false);
 
   // Sync if preselected props change
   React.useEffect(() => {
@@ -96,6 +97,8 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
 
   const handleSubmitMutation = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(submitting)return;
+    setSubmitting(true);
     setErrorMessage(null);
 
     if (!currentSelectedItem) {
@@ -114,7 +117,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
       return;
     }
 
-    const res = await addStockMutation({
+    try { const res = await addStockMutation({
       barang_id: currentSelectedItem.id,
       nama_barang: currentSelectedItem.nama_barang,
       jenis: mutationType,
@@ -138,6 +141,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
     }
 
     setIsModalOpen(false);
+    } finally { setSubmitting(false); }
   };
 
   if (modalOnly && !isModalOpen) {
@@ -472,13 +476,14 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
                 </button>
                 <button
                   type="submit"
+                  disabled={submitting}
                   className={`px-4 py-2 text-xs font-semibold text-white rounded-lg shadow-sm transition-colors ${
                     mutationType === 'MASUK'
                       ? 'bg-emerald-600 hover:bg-emerald-700'
                       : 'bg-rose-600 hover:bg-rose-700'
                   }`}
                 >
-                  Simpan Transaksi Mutasi
+                  {submitting?'Menyimpan…':'Simpan Transaksi Mutasi'}
                 </button>
               </div>
             </form>
