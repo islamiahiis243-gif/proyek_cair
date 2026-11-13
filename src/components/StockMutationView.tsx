@@ -98,7 +98,6 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
   const handleSubmitMutation = async (e: React.FormEvent) => {
     e.preventDefault();
     if(submitting)return;
-    setSubmitting(true);
     setErrorMessage(null);
 
     if (!currentSelectedItem) {
@@ -117,6 +116,7 @@ export const StockMutationView: React.FC<StockMutationViewProps> = ({
       return;
     }
 
+    setSubmitting(true);
     try { const res = await addStockMutation({
       barang_id: currentSelectedItem.id,
       nama_barang: currentSelectedItem.nama_barang,
