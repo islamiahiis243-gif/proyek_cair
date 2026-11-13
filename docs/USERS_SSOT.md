@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 2.2
+- **Versi:** 2.3
 - **Tanggal:** 2026-11-13
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -22,7 +22,9 @@ Artinya:
 4. Persona aktif menentukan konteks pekerjaan yang sedang dijalankan; persona tidak mengganti identitas asli.
 5. Hak akses ditentukan oleh kombinasi role, permission, atribut/kondisi, hubungan keanggotaan, dan cakupan sumber daya.
 6. Setiap tindakan penting dapat ditelusuri ke identitas asli, perusahaan, persona, proyek, dan konteks yang digunakan.
-7. Tidak ada pendaftaran publik yang otomatis memberikan keanggotaan perusahaan atau hak istimewa.
+7. Pendaftaran publik melalui Google/email dapat membuat User Identity dan Personal Workspace, tetapi tidak otomatis memberikan Company Membership atau hak istimewa perusahaan.
+8. Personal Workspace dan Company Workspace adalah konteks/ruang kerja berbeda dengan kepemilikan, batas data, dan otorisasi terpisah.
+9. Pengguna dapat berkembang dari penggunaan personal menuju penggunaan perusahaan melalui penawaran dan onboarding resmi; penawaran tidak mengubah akses atau privilege dengan sendirinya.
 
 ## 2. Terminologi dan pemisahan konsep
 
@@ -646,3 +648,171 @@ Untuk workflow dan pengesahan dokumen, audit juga harus mencatat:
 Audit wajib mencakup sekurang-kurangnya login dan kegagalan akses yang relevan, provisioning/aktivasi Company Super Admin, invitation dan redemption, perubahan membership/persona/role/permission/authority, perubahan struktur organisasi dan penempatan, CRUD/import/export, transaksi, approval/rejection/return, penerbitan/revisi/pembatalan dokumen, final signing, verifikasi QR, serta tindakan administratif Platform Owner.
 
 Akses baca audit log juga harus dibatasi berdasarkan tenant dan kewenangan. Platform-level audit dapat diakses hanya oleh otoritas platform yang berwenang. Retensi, ekspor, dan perlindungan integritas audit harus ditetapkan melalui kebijakan platform. Jangan menyimpan password, kode aktivasi plaintext, token sesi, secret, atau data autentikasi sensitif dalam audit log.
+
+## 13. Model pengguna umum dan Personal Workspace
+
+### 13.1 Keputusan produk: Model B — Personal Workspace
+
+Proyek Cair mendukung penggunaan umum/mandiri di luar konteks perusahaan. Pengguna dapat mendaftar langsung menggunakan Google/email yang didukung tanpa RFIN dan tanpa undangan perusahaan. Setelah autentikasi berhasil, sistem dapat membuat atau menghubungkan satu User Identity dan menyediakan **Personal Workspace** bagi identitas tersebut.
+
+Personal Workspace adalah ruang kerja pribadi untuk mengelola proyek dan aktivitas milik pengguna. Personal Workspace:
+- dimiliki oleh satu User Identity;
+- bukan Company/Tenant dan bukan Company Workspace;
+- tidak memiliki NPWP atau status legal perusahaan;
+- tidak memperoleh Company Membership secara otomatis;
+- tidak memperoleh Company Super Admin, akses Console perusahaan, kewenangan organisasi, atau final-signatory appointment;
+- tidak dapat mengakses data Company Workspace tanpa Company Membership aktif dan otorisasi yang sah;
+- pada tahap awal bersifat single-owner: hanya pemilik User Identity yang dapat mengaksesnya. Kolaborasi/berbagi dengan pengguna lain belum termasuk cakupan awal dan memerlukan desain sharing, ACL/relasi, audit, serta kontrol pencabutan tersendiri.
+
+Registrasi umum tidak menggunakan RFIN-A maupun RFIN-B. Google/email tetap menjadi mekanisme autentikasi. RFIN hanya digunakan pada proses perusahaan yang telah ditetapkan dalam bagian RFIN.
+
+### 13.2 Satu identitas untuk konteks personal dan perusahaan
+
+Satu User Identity dapat memiliki Personal Workspace sekaligus menjadi anggota satu atau beberapa Company/Tenant. Ketika identitas personal yang sama menerima dan menukarkan RFIN-B/invitation yang valid, sistem mengaktifkan Company Membership pada identitas yang sudah ada; sistem tidak boleh membuat akun/identitas duplikat hanya karena pengguna berpindah dari penggunaan personal ke perusahaan.
+
+Personal Workspace tetap ada setelah Company Membership aktif. Bergabung dengan perusahaan tidak otomatis mengonversi, menghapus, memindahkan, atau menggabungkan data Personal Workspace ke Company Workspace. Demikian pula, kepemilikan Personal Workspace tidak memberikan hak atas data perusahaan.
+
+Pengguna memilih konteks aktif secara eksplisit, misalnya Personal Workspace atau Company Workspace tertentu. Context switch hanya mengubah konteks kerja yang diminta; bukan proses pemberian privilege. Backend wajib memvalidasi ulang kepemilikan Personal Workspace atau Company Membership, persona, role, permission, authority, dan scope pada setiap operasi yang dilindungi.
+
+### 13.3 Pembedaan Workspace
+
+| Aspek | Personal Workspace | Company Workspace |
+|---|---|---|
+| Pemilik | Satu User Identity | Satu Company/Tenant |
+| Cara memperoleh | Dibuat setelah signup Google/email yang berhasil | Melalui registrasi/provisioning perusahaan sesuai kebijakan platform |
+| Identitas perusahaan/NPWP | Tidak ada | Ada sesuai proses verifikasi perusahaan |
+| Membership | Tidak membutuhkan Company Membership | Memerlukan Company Membership aktif untuk pengguna operasional |
+| Persona/role/authority perusahaan | Tidak ada secara default | Diberikan sesuai kebijakan perusahaan dan platform |
+| Company Console | Tidak tersedia | Hanya untuk satu Company Super Admin aktif sesuai aturan |
+| RFIN | Tidak digunakan untuk signup personal | RFIN-A untuk aktivasi Company Super Admin; RFIN-B untuk undangan anggota |
+| Isolasi data | Terikat pada pemilik Personal Workspace | Terikat pada tenant dan scope perusahaan |
+| Kolaborasi | Tidak tersedia pada tahap awal | Mengikuti Company Membership dan otorisasi |
+
+Personal Workspace dapat menggunakan fitur personal yang secara eksplisit disediakan oleh platform. Ketersediaan modul, kuota, kapasitas, retensi, dan paket layanan personal merupakan kebijakan produk/komersial tersendiri; keberadaan Personal Workspace tidak berarti seluruh fitur perusahaan tersedia gratis atau otomatis.
+
+### 13.4 Isolasi dan keamanan Personal Workspace
+
+1. Setiap resource personal harus memiliki relasi kepemilikan yang jelas ke User Identity atau Personal Workspace.
+2. Query dan mutasi personal hanya boleh mengakses resource yang dimiliki identitas tersebut.
+3. Personal Workspace harus dipisahkan dari tenant perusahaan pada model data, query, API, dan RLS. Jangan menggunakan Company ID fiktif untuk mewakili workspace personal.
+4. Jangan menganggap user_id, workspace_id, atau context yang dikirim client sebagai bukti kepemilikan. Server/database harus memverifikasi relasinya.
+5. Company Membership tidak boleh disimpulkan dari kepemilikan Personal Workspace, email domain, NPWP, atau status Company Readiness.
+6. Personal Workspace tidak boleh menerbitkan RFIN-A/RFIN-B, membuat Company Super Admin, mendaftarkan Company Workspace secara otomatis, atau mengangkat final signatory perusahaan.
+7. Penghapusan, penutupan, ekspor, pemulihan, dan retensi data Personal Workspace harus mengikuti kebijakan platform yang eksplisit dan teraudit.
+8. Jika kelak kolaborasi personal diaktifkan, fitur itu memerlukan desain terpisah untuk undangan, resource sharing, ACL/relationship, expiry/revocation, audit, dan batas data; jangan mengandalkan penambahan kolom owner atau berbagi URL saja.
+
+## 14. Personal-to-Company Growth Journey
+
+### 14.1 Prinsip
+
+Proyek Cair dapat menyediakan jalur pertumbuhan pengguna dari penggunaan individu menuju penggunaan organisasi. Personal Workspace menjadi titik masuk penggunaan umum, sementara Company Workspace tetap merupakan entitas organisasi yang terpisah dan tunduk pada verifikasi serta proses provisioning perusahaan.
+
+Alur konseptual:
+
+1. **Personal** — pengguna mendaftar dengan Google/email dan menggunakan Personal Workspace.
+2. **Growing** — pola penggunaan menunjukkan aktivitas atau kebutuhan yang berkembang. Ini merupakan indikator produk, bukan role atau status hukum.
+3. **Company Ready** — sinyal penggunaan menunjukkan kemungkinan kebutuhan tata kelola, kolaborasi, pelaporan, atau kontrol organisasi.
+4. **Company Offer** — platform dapat menampilkan penawaran/informasi untuk mengeksplorasi penggunaan Proyek Cair dalam konteks perusahaan.
+5. **Company Onboarding** — jika pengguna berminat, proses registrasi dan verifikasi perusahaan dijalankan sesuai kebijakan platform.
+6. **Company Activation** — setelah perusahaan disetujui, Platform Super Admin menerbitkan RFIN-A untuk aktivasi satu kursi Company Super Admin. Company Super Admin selanjutnya dapat mengundang anggota melalui RFIN-B.
+
+Status Personal, Growing, dan Company Ready adalah status segmentasi/indikator kesiapan produk, bukan jabatan, persona, role, permission, authority, Company Membership, atau bukti legalitas perusahaan. Status tersebut tidak boleh digunakan sebagai dasar untuk memberikan akses tenant atau privilege.
+
+### 14.2 Company Readiness
+
+Platform dapat menghitung atau menilai indikator kesiapan penggunaan perusahaan, misalnya:
+- konsistensi/intensitas penggunaan;
+- jumlah dan kompleksitas proyek yang dikelola;
+- kebutuhan kapasitas atau pelaporan yang meningkat;
+- kebutuhan kolaborasi lebih dari satu pengguna;
+- kebutuhan workflow, review, approval, audit, dan pembagian kewenangan;
+- sinyal kebutuhan bisnis lain yang relevan.
+
+Indikator, ambang batas, bobot, dan metode penilaian belum ditetapkan dalam SSOT ini. Penilaian harus proporsional, transparan pada tingkat yang sesuai, menghormati kebijakan privasi, dan tidak menyimpulkan status legal perusahaan hanya dari perilaku penggunaan. Hindari keputusan otomatis yang berdampak pada pembatasan hak pengguna.
+
+Company Readiness adalah sinyal rekomendasi produk, bukan keputusan kelayakan hukum atau persetujuan perusahaan.
+
+### 14.3 Company Offer
+
+Company Offer adalah komunikasi/penawaran produk dari platform kepada pengguna Personal Workspace untuk mengeksplorasi atau memulai onboarding Company Workspace.
+
+Aturan:
+- Company Offer dapat dipicu oleh indikator Company Readiness atau ditampilkan melalui kanal promosi produk yang disetujui.
+- Penawaran bersifat informatif dan sukarela, bukan paksaan.
+- Pengguna dapat memilih untuk mengeksplorasi penawaran atau menundanya/menolaknya.
+- Menerima, membuka, atau mengklik Company Offer tidak membuat Company/Tenant, Company Membership, Company Super Admin, persona, role, permission, authority, atau akses Console.
+- Company Offer bukan RFIN dan tidak menggantikan RFIN-A/RFIN-B.
+- Penawaran harus menjelaskan bahwa penggunaan perusahaan memerlukan proses registrasi/verifikasi dan aktivasi resmi.
+- Frekuensi, kanal, preferensi komunikasi, dan penghentian penawaran harus mengikuti kebijakan produk dan privasi platform.
+- Status penawaran dan respons pengguna dapat dicatat untuk analitik produk secara proporsional; jangan menyimpan data sensitif yang tidak diperlukan.
+
+Contoh pesan produk (copy dapat berubah dan bukan kontrak API):
+
+> **Your projects are growing. Is it time to work as a company?**
+>
+> Aktivitas Anda menunjukkan bahwa kebutuhan pengelolaan proyek mungkin sudah berkembang melampaui penggunaan individu. Jelajahi Proyek Cair Company untuk mendapatkan pengelolaan organisasi, kolaborasi tim, kontrol akses, dan persetujuan yang lebih terstruktur.
+
+### 14.4 Company Offer, Registration, dan Activation adalah proses berbeda
+
+| Proses | Tujuan | Otoritas/proses |
+|---|---|---|
+| Company Offer | Menginformasikan opsi penggunaan tingkat perusahaan | Platform sesuai kebijakan produk |
+| Company Registration & Verification | Mendaftarkan dan memverifikasi entitas perusahaan | Platform Owner/petugas platform berwenang |
+| Company Super Admin Activation | Mengaktifkan satu kursi Company Super Admin | Platform Super Admin melalui RFIN-A |
+| Employee Invitation & Membership Activation | Mengaktifkan membership dan akses awal pengguna perusahaan | Company Super Admin melalui RFIN-B |
+
+Tidak ada proses Company Offer yang dapat melewati verifikasi perusahaan atau mengubah aturan satu Company Super Admin aktif per perusahaan.
+
+### 14.5 Tingkatan produk — arah komersial, bukan hak akses otomatis
+
+Sebagai arah eksplorasi produk, platform dapat mempertimbangkan:
+- **Personal:** penggunaan individu dan fitur dasar yang disediakan untuk Personal Workspace.
+- **Professional / Individual Plus:** opsi paket personal dengan kapasitas atau analitik lebih besar, tetap bukan Company Workspace.
+- **Company:** penggunaan organisasi dengan Company Super Admin, membership, persona, role, permission, authority, workflow, dan audit organisasi.
+
+Nama paket, fitur, harga, kuota, dan aturan billing belum diputuskan. Paket komersial tidak boleh menggantikan pemeriksaan authorization. Membeli atau menerima penawaran paket tidak otomatis memberikan Company Membership atau kewenangan perusahaan.
+
+## 15. Tahapan implementasi konseptual
+
+Tahapan berikut merupakan arah implementasi, bukan pernyataan bahwa fitur telah tersedia:
+
+**Tahap 1 — Fondasi identitas dan konteks**
+- Audit implementasi User Identity, Supabase Auth, skema, dan RLS yang sudah ada.
+- Signup Google/email untuk pengguna umum.
+- Pembuatan/penautan satu User Identity dan Personal Workspace.
+- Pemisahan Personal Context dan Company Context.
+- Company Membership tetap melalui RFIN-B.
+- Company Super Admin tetap melalui provisioning resmi dan RFIN-A.
+- Server-side authorization dan isolasi data personal/perusahaan.
+
+**Tahap 2 — Penggunaan personal**
+- Pembuatan dan pengelolaan proyek personal.
+- Dashboard Personal Workspace.
+- Kebijakan kuota, retensi, ekspor, pemulihan, dan penghapusan data.
+- Pada tahap awal Personal Workspace hanya dapat diakses pemiliknya; tidak ada kolaborasi personal.
+
+**Tahap 3 — Growth Journey**
+- Indikator Company Readiness.
+- Company Offer yang informatif, sukarela, dan dapat ditunda/ditolak.
+- Pengukuran respons dan efektivitas penawaran secara proporsional.
+- Company onboarding yang terpisah dari Company Offer.
+
+**Tahap 4 — Ekspansi lanjutan**
+- Pertimbangkan kolaborasi Personal Workspace hanya setelah desain sharing dan otorisasi disetujui.
+- Pertimbangkan paket Professional/Individual Plus dan Company.
+- Jika kelak diperlukan perpindahan data personal ke perusahaan, sediakan mekanisme transfer/copy yang eksplisit, disetujui pemilik, tervalidasi tujuan, dan teraudit. Jangan memindahkan kepemilikan atau menggabungkan data secara otomatis.
+
+## 16. Changelog
+
+### Versi 2.3 — 2026-11-13
+- Menetapkan Model B: signup umum Google/email menyediakan Personal Workspace.
+- Menetapkan Personal Workspace sebagai konteks personal yang berbeda dari Company/Tenant dan Company Workspace.
+- Menegaskan satu User Identity dapat memiliki Personal Workspace dan beberapa Company Membership tanpa akun duplikat.
+- Menetapkan Personal Workspace single-owner pada tahap awal; kolaborasi personal belum termasuk cakupan.
+- Menetapkan pemisahan keamanan, ownership, RLS, dan context switching antara personal dan perusahaan.
+- Menambahkan Personal-to-Company Growth Journey: Personal → Growing → Company Ready → Company Offer → Company Onboarding → Company Activation.
+- Memisahkan Company Offer, Company Registration/Verification, aktivasi RFIN-A, dan undangan RFIN-B.
+- Menetapkan Company Readiness sebagai indikator produk, bukan role, permission, authority, atau bukti legalitas.
+- Menetapkan Company Offer sebagai penawaran sukarela yang tidak memberikan akses atau privilege.
+- Menambahkan tahapan implementasi dan arah paket Personal / Professional / Company; detail komersial tetap belum diputuskan.
+
