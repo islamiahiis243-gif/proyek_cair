@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 1.9
+- **Versi:** 2.0
 - **Tanggal:** 2026-11-13
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -34,7 +34,7 @@ Istilah berikut harus digunakan secara konsisten dalam kode, database, API, UI, 
 | **Authentication** | Proses membuktikan siapa pengguna melalui penyedia autentikasi. |
 | **Company / Tenant** | Organisasi yang terdaftar di platform dan menjadi batas isolasi data. |
 | **Company Membership** | Hubungan antara satu User Identity dan satu Company, beserta status keanggotaannya. |
-| **Employee Record** | Catatan kepegawaian seseorang dalam satu perusahaan; orang yang sama dapat memiliki record berbeda pada perusahaan berbeda. |
+| **Employee Record** | Catatan kepegawaian terbatas untuk orang yang menjadi pengguna ProyekCair dan memerlukan pencatatan kewenangan/penugasan operasional di perusahaan tersebut, termasuk pihak yang diberi kewenangan CRUD langsung atas data atau ditunjuk sebagai pihak TTE/QR. Employee Record bukan daftar seluruh karyawan perusahaan; orang yang tidak menggunakan aplikasi dan tidak memegang kewenangan/penugasan tersebut tidak wajib dicatat sebagai Employee Record. Satu orang dapat memiliki Employee Record tersendiri pada setiap perusahaan tempat ia menjadi anggota dan menjalankan persona. |
 | **employee_number** | Nomor Induk Karyawan (Employee Number) yang ditetapkan perusahaan masing-masing; bukan Nomor Induk Kependudukan (NIK), bukan ID internal ProyekCair, dan bukan kredensial login. |
 | **Organizational Position** | Jabatan struktural seseorang, misalnya Supervisor, Superintendent, atau Manager; berbeda dari persona dan role aplikasi. |
 | **Department / Unit** | Unit organisasi tempat seseorang ditempatkan, misalnya Operasional, Finance, Procurement, atau Head Office. |
@@ -46,7 +46,7 @@ Istilah berikut harus digunakan secara konsisten dalam kode, database, API, UI, 
 | **Invitation** | Undangan yang dibuat oleh pihak berwenang agar identitas dapat bergabung ke perusahaan dan menerima persona/role tertentu. |
 | **Platform Super Admin** | Pemilik/pengelola tertinggi platform UDU, dengan otoritas lintas tenant sesuai kebijakan platform. |
 | **Company Super Admin** | Administrator tertinggi pada satu perusahaan, terbatas pada tenant perusahaannya sendiri. |
-| **Pihak Terkait (penunjukan kewenangan)** | Orang/identitas yang secara eksplisit ditunjuk perusahaan untuk bertindak atau menandatangani dokumen tertentu dalam scope dan authority tertentu. Penunjukan ini menjadi dasar konfigurasi final signatory; tidak otomatis menyatakan hubungan kepemilikan atau status hukum orang tersebut terhadap perusahaan. |
+| **Pihak Terkait (penunjukan kewenangan)** | User Identity yang telah memiliki Company Membership aktif dan Employee Record pada perusahaan yang menunjuknya, lalu secara eksplisit ditetapkan Company Super Admin sebagai pihak yang berwenang melakukan TTE/pengesahan QR untuk dokumen dan scope tertentu. Penunjukan harus terkait persona, authority, dan masa berlaku yang sah. Pihak eksternal tanpa akun ProyekCair atau tanpa membership pada perusahaan tersebut tidak dapat menjadi final signatory. |
 | **Orang Terkait (relasi orang–perusahaan)** | Catatan hubungan seseorang dengan perusahaan dalam kapasitas legal, kepemilikan, pengendalian, atau manfaat, misalnya pendiri, direktur/CEO, pemegang saham, atau penerima manfaat (*beneficial owner*). Orang tersebut dapat sama sekali tidak mengetahui, menggunakan, atau memiliki akun di ProyekCair; pencatatannya tidak mensyaratkan User Identity, login, membership, persona, atau aktivitas di aplikasi. Konsep ini berbeda dari penunjukan Pihak Terkait sebagai penandatangan. Fitur ini belum termasuk cakupan implementasi saat ini. |
 | **Audit Trail** | Catatan append-only atas aktivitas dan perubahan penting yang dapat ditelusuri. |
 
@@ -72,7 +72,8 @@ Aturan:
 - Platform Super Admin tidak dapat diperoleh melalui pendaftaran publik, kode undangan perusahaan, atau promosi role oleh Company Super Admin.
 - Otoritas Platform Super Admin harus diberikan melalui proses bootstrap/administrasi platform yang terlindungi dan diaudit.
 - Platform Owner dapat memiliki persona operasional tambahan di satu atau beberapa perusahaan, termasuk perusahaan yang dikelolanya sendiri.
-- Saat menggunakan persona operasional, identitas Platform Owner tetap dipertahankan dan tidak diturunkan atau diganti. Akses platform tingkat tinggi tetap tunduk pada aturan khusus platform; pemilihan persona operasional tidak boleh menjadi jalan untuk menyamarkan identitas atau menghindari audit.
+- Saat menggunakan persona operasional pada suatu perusahaan, Platform Owner bertindak dalam konteks perusahaan tersebut dan wajib tunduk pada membership, persona, role, permission, authority, serta project/resource scope yang diberikan oleh Company Super Admin perusahaan itu. Hak Platform Super Admin tidak boleh dipakai untuk melewati atau memperluas kewenangan operasional persona.
+- Kewenangan Platform Super Admin hanya digunakan melalui tindakan administratif platform yang eksplisit, terpisah dari pekerjaan operasional tenant, dengan alasan dan audit trail yang sesuai. Identitas asli Platform Owner tetap tercatat pada kedua jenis tindakan; tindakan administratif platform tidak boleh disamarkan sebagai tindakan persona operasional.
 - Sistem sebaiknya mendukung satu pemilik utama yang terlindungi. Administrator platform tambahan dapat ditunjuk dengan kewenangan yang eksplisit dan tidak otomatis setara dengan pemilik utama.
 
 ### 3.2 Company Super Admin
@@ -128,7 +129,6 @@ Company Console menjadi pusat tata kelola dan pengawasan, bukan tempat Company S
 #### 3.2.4 Pengaturan role dan wewenang pengguna undangan
 
 Company Super Admin dapat mengatur role dan wewenang orang yang diundang melalui dua pendekatan:
-
 - **Default/template:** memilih template persona atau role bawaan ProyekCair, misalnya Project Manager, Site Engineer, Procurement, Finance, Storekeeper, HSE Officer, Document Controller, atau Viewer.
 - **Custom:** menyesuaikan kombinasi role, permission, project scope, dan authority sesuai struktur serta kebutuhan perusahaan.
 
@@ -211,16 +211,16 @@ Perusahaan dapat memiliki administrator dengan kewenangan lebih terbatas, misaln
 
 ## 4.1 Identitas kepegawaian dan employee_number
 
-Setiap orang yang dicatat sebagai karyawan perusahaan harus memiliki Employee Record yang terhubung ke User Identity dan Company Membership yang tepat.
+Employee Record **tidak dibuat untuk seluruh daftar karyawan perusahaan**. Employee Record dibuat secara terbatas bagi orang yang menjadi pengguna ProyekCair dan memerlukan pencatatan kewenangan/penugasan operasional, khususnya pihak yang diberi kewenangan CRUD langsung atas data atau ditunjuk sebagai pihak TTE/pengesahan QR. Orang yang tidak menggunakan aplikasi dan tidak memegang kewenangan tersebut tidak wajib memiliki Employee Record. Setiap Employee Record harus terhubung ke User Identity dan Company Membership aktif pada perusahaan yang bersangkutan.
 
 - `user_id` adalah ID identitas autentikasi global orang tersebut.
 - `company_id` adalah ID internal tenant/perusahaan.
 - `employee_id` adalah ID internal record kepegawaian orang tersebut di satu perusahaan.
-- `employee_number` adalah NIK/nomor induk karyawan yang ditetapkan atau diberikan oleh perusahaan masing-masing. Nilainya diinput/dikelola melalui administrasi perusahaan, bukan dibuat otomatis oleh ProyekCair.
+- `employee_number` adalah Nomor Induk Karyawan (Employee Number) yang ditetapkan atau diberikan oleh perusahaan masing-masing. Nilainya diinput/dikelola melalui administrasi perusahaan, bukan dibuat otomatis oleh ProyekCair.
 - Format `employee_number` mengikuti sistem perusahaan, misalnya `00125`, `MM-00125`, atau `EMP/OPS/025`; format tidak diasumsikan seragam.
 - Terapkan keunikan `UNIQUE(company_id, employee_number)`. Nilai yang sama boleh digunakan oleh perusahaan berbeda.
 - `employee_number` bukan username, password, secret, atau kredensial autentikasi.
-- Satu User Identity yang bekerja pada beberapa perusahaan memiliki Employee Record dan employee_number masing-masing pada setiap perusahaan.
+- Satu User Identity yang bekerja dengan persona operasional atau memegang kewenangan CRUD/TTE QR pada beberapa perusahaan harus memiliki Company Membership aktif dan persona yang ditetapkan Company Super Admin pada **setiap perusahaan** tersebut. Employee Record dan employee_number dibuat terpisah pada setiap perusahaan sesuai kriteria Employee Record di atas; satu User Identity global tidak menggantikan membership atau penugasan perusahaan.
 - Pegawai yang keluar tidak dihapus secara fisik jika telah memiliki histori; statusnya diakhiri/nonaktif dan histori dipertahankan.
 - Perubahan employee_number, status kepegawaian, jabatan, departemen, atasan, dan penempatan harus memiliki histori.
 
@@ -257,8 +257,7 @@ Ketentuan:
 - Contoh tersebut bukan struktur wajib/universal. Perusahaan dapat menambah, mengurangi, mengganti nama, atau mengurutkan jabatan.
 - Struktur proyek lapangan dapat berakhir pada Manager/KTT/Project Manager; jabatan di atasnya dapat berada pada struktur Head Office atau tata kelola korporat.
 - Jabatan/position, departemen/unit, dan relasi atasan-bawahan memiliki ID internal auto-generated serta riwayat masa berlaku.
-- Penempatan karyawan dapat berbeda menurut perusahaan, departemen, proyek, lokasi, dan periode.
-- Atasan langsung dan rantai pelaporan disimpan sebagai relasi organisasi dengan effective date, bukan disimpulkan hanya dari nama jabatan.
+- Penempatan karyawan dapat berbeda menurut perusahaan, departemen, proyek, lokasi, dan periode.- Atasan langsung dan rantai pelaporan disimpan sebagai relasi organisasi dengan effective date, bukan disimpulkan hanya dari nama jabatan.
 - Posisi direktur dengan lingkup berbeda (misalnya Direktur Operasional dan Direktur Keuangan) harus dapat dibedakan.
 - Perubahan struktur, jabatan, departemen, atasan, atau penempatan tidak boleh mengubah snapshot histori aktivitas terdahulu.
 
@@ -296,21 +295,24 @@ Contoh kategori workflow: laporan progres harian/mingguan, permintaan dan pengel
 Persetujuan dokumen/data mengikuti **alur serial (berurutan)** berdasarkan tangga/hierarki organisasi dan aturan workflow yang berlaku. Persetujuan paralel untuk beberapa tahap/pejabat pada satu rantai approval tidak diperbolehkan. Pengguna yang berada pada tahap berikutnya boleh melihat dokumen/data secara paralel (read-only sesuai akses), tetapi tindakan persetujuan hanya dibuka ketika giliran tahapnya aktif dan seluruh tahap sebelumnya telah selesai.
 
 - Setiap tahap yang diwajibkan harus ditindaklanjuti satu per satu sesuai urutan workflow, misalnya Foreman/Worker → Supervisor → Superintendent → Manager/KTT/Project Manager. Rantai Head Office dapat berbeda sesuai struktur dan kebijakan perusahaan.
+- Data identitas final signatory yang wajib disimpan dan diverifikasi mencakup data KTP (NIK dan informasi identitas yang diperlukan), alamat sesuai KTP, alamat domisili, nomor telepon, serta email aktif. Data tersebut hanya boleh diakses oleh pihak yang berwenang, dilindungi sesuai klasifikasi data pribadi, dan tidak boleh ditampilkan berlebihan pada dokumen/QR publik.
+- Email dan kanal notifikasi yang terdaftar digunakan untuk pemberitahuan di luar aplikasi, termasuk pemberitahuan bahwa pengguna diminta menandatangani dokumen tertentu, dokumen yang telah ditandatangani kemudian dibatalkan, atau perubahan status penting lainnya. Notifikasi harus memuat referensi dokumen dan instruksi untuk meninjau konteks/riwayatnya; jangan mengirim data pribadi atau isi dokumen sensitif secara berlebihan.
 - Pengguna pada tahap aktif meninjau dokumen/data, lalu melakukan tindakan eksplisit melalui aplikasi: approve/agree, reject, atau return for revision sesuai hak dan kebijakan. Klik persetujuan merupakan persetujuan elektronik internal yang tercatat; bukan tanda tangan QR.
 - **QR/tanda tangan pengesahan hanya diterbitkan oleh penandatangan akhir (final signatory)** setelah seluruh tahap persetujuan serial selesai. Tidak semua reviewer/approver membubuhkan tanda tangan QR.
 - **Default penandatangan akhir untuk workflow proyek maupun departemen adalah Manager / KTT / Project Manager**, sesuai struktur organisasi dan konteks proses. Default ini merupakan template awal, bukan aturan jabatan yang kaku atau hard-coded.
 - **Company Super Admin dapat meng-custom penunjukan final signatory** melalui Company Console berdasarkan perusahaan, jenis dokumen/formulir/kontrak, proyek, departemen, unit, atau scope lain yang diizinkan policy. Konfigurasi dapat menunjuk orang yang berbeda untuk jenis dokumen atau scope yang berbeda; tidak harus selalu pemegang jabatan default.
-- Penunjukan harus mengikat ke User Identity dan Employee Record/membership yang sah, serta memvalidasi jabatan/position, persona/role, authority, ruang lingkup, masa berlaku, dan status aktif. Nama yang diketik bebas tidak cukup sebagai dasar otorisasi.
-- **Seseorang dapat ditunjuk sebagai final signatory oleh Company Super Admin di beberapa perusahaan sekaligus**, selama masing-masing perusahaan secara terpisah memberikan penunjukan dan scope kewenangan yang jelas.
-- Dalam terminologi yang mengacu pada pola Coretax, konfigurasi ini berada pada konsep **Pihak Terkait**: perusahaan menunjuk identitas orang tertentu untuk mewakili atau mengesahkan tindakan/dokumen dalam batas kewenangan yang ditentukan. Penunjukan tersebut harus dibedakan dari **Orang Terkait**, yaitu pencatatan hubungan orang dengan perusahaan (misalnya pendiri, direktur/CEO, atau penerima manfaat). Status sebagai Orang Terkait tidak otomatis memberikan hak akses aplikasi atau hak tanda tangan; demikian pula penunjukan sebagai Pihak Terkait tidak otomatis membuktikan status kepemilikan/jabatan legal.
+- Final signatory wajib memiliki User Identity/akun ProyekCair, Company Membership aktif pada perusahaan yang menunjuk, dan Employee Record pada perusahaan tersebut. Penunjukan harus mengikat ke identitas dan record yang sah, serta memvalidasi persona yang diberikan Company Super Admin, role/permission, authority, ruang lingkup dokumen/proyek/departemen, masa berlaku, dan status aktif. Nama yang diketik bebas tidak cukup sebagai dasar otorisasi. **Pihak eksternal yang tidak memiliki akun atau membership pada perusahaan tersebut tidak boleh menjadi final signatory.**
+- **Satu orang dapat menjadi final signatory di beberapa perusahaan dengan satu User Identity global**, tetapi pada setiap perusahaan ia wajib memiliki Company Membership aktif, Employee Record, serta persona yang ditetapkan oleh Company Super Admin perusahaan tersebut. Setiap perusahaan secara terpisah menetapkan role/permission, authority, scope dokumen, dan masa berlaku penunjukan. Membership/persona/otoritas di PT A tidak memberikan hak di PT B atau PT C.
+- Konsep **Pihak Terkait** dalam ProyekCair dibatasi pada pengguna internal perusahaan yang memenuhi syarat akun, membership, dan Employee Record sebagaimana di atas. Istilah ini digunakan untuk konfigurasi pihak yang diberi kewenangan TTE/pengesahan QR, bukan untuk mencatat pihak eksternal tanpa akses aplikasi. Konsep ini tetap berbeda dari **Orang Terkait**, yaitu relasi legal/kepemilikan/manfaat; fitur Orang Terkait tidak termasuk aplikasi.
 - **Batas cakupan saat ini: Orang Terkait TIDAK diimplementasikan di web app ProyekCair ini.** Fitur, modul, registri, UI, API, dan skema operasional untuk mengelola Orang Terkait bukan bagian dari implementasi aplikasi ini. ProyekCair pada tahap ini hanya memodelkan penunjukan Pihak Terkait untuk kebutuhan kewenangan dan final signatory. Jangan membangun atau menampilkan fitur Orang Terkait dalam web app ini kecuali ada keputusan dan perubahan cakupan yang secara eksplisit disetujui kemudian.
-- Orang Terkait pada dasarnya adalah data hubungan legal/kepemilikan/manfaat antara seseorang dan perusahaan, **bukan pengguna aplikasi**. Orang yang dicatat sebagai pendiri, direktur/CEO, pemegang saham, atau penerima manfaat bisa saja tidak pernah diberi tahu tentang ProyekCair, tidak pernah login, tidak memiliki akun, dan tidak terlibat dalam operasional aplikasi. Mereka mungkin baru mengetahui pencatatan tersebut ketika diminta konfirmasi atau dihubungi oleh otoritas/pihak berwenang, sesuai proses hukum yang berlaku.
-- Karena itu, registri Orang Terkait (jika kelak dibangun) harus dapat menyimpan profil relasi pihak eksternal tanpa memaksa pembuatan User Identity atau Company Membership. Data Orang Terkait tidak boleh otomatis menghasilkan invitation, akun, persona, role, permission, authority, akses Console, atau hak tanda tangan.
-- Hubungan Orang Terkait dan User Identity harus bersifat opsional dan terpisah: seseorang yang kebetulan juga pengguna ProyekCair dapat ditautkan melalui proses pencocokan/validasi yang sah, tetapi pencatatan sebagai Orang Terkait tidak boleh mengasumsikan bahwa identitas orang tersebut telah terverifikasi sebagai pengguna. Dengan demikian satu identitas personal dapat memiliki otoritas pengesahan tertentu di Perusahaan A, B, dan C tanpa membuat akun login duplikat.
+- Orang Terkait pada dasarnya adalah data hubungan legal/kepemilikan/manfaat antara seseorang dan perusahaan dan tetap di luar cakupan web app ProyekCair. Tidak ada registri atau modul Orang Terkait dalam aplikasi ini. Ketentuan konseptual mengenai Orang Terkait tidak dapat digunakan sebagai jalur alternatif untuk membuat pihak eksternal menjadi final signatory.
+- Seseorang yang menjadi final signatory di beberapa perusahaan menggunakan satu User Identity global, tetapi wajib memiliki Company Membership aktif, Employee Record, dan persona yang ditetapkan secara terpisah oleh Company Super Admin pada masing-masing perusahaan.
 - Contoh konseptual: seseorang yang memiliki otoritas menandatangani dokumen tertentu melalui Coretax pada beberapa perusahaan dapat dianalogikan sebagai pihak yang ditunjuk masing-masing Company Super Admin ProyekCair untuk mengesahkan jenis dokumen tertentu pada tenant mereka. **Coretax hanya contoh pola penunjukan lintas perusahaan; ProyekCair tidak mengklaim integrasi, afiliasi, atau kesetaraan kewenangan perpajakan dengan Coretax/DJP.**
 - Penunjukan lintas perusahaan tidak memberikan akses otomatis ke tenant lain, tidak memperluas kewenangan ke semua dokumen, dan tidak menggantikan proses persetujuan serial internal perusahaan. Otoritas final signatory selalu spesifik pada perusahaan dan scope penunjukannya.
 - Penetapan, perubahan, penangguhan, pencabutan, dan penggunaan kewenangan final signatory wajib dicatat dalam audit trail, termasuk pihak yang menunjuk, pihak yang ditunjuk, tenant, jenis dokumen, scope, authority, masa berlaku, dan waktu tindakan.
-- Final signatory baru dapat melakukan pengesahan setelah seluruh tahap persetujuan serial yang diwajibkan selesai dan dokumen berada pada versi final yang disetujui. QR harus terikat pada dokumen/versi final, identitas penandatangan, waktu pengesahan, dan mekanisme verifikasi publik/internal. Perubahan dokumen setelah pengesahan harus membatalkan/menandai QR lama tidak berlaku dan memerlukan proses revisi serta pengesahan ulang.
+- Final signatory baru dapat melakukan pengesahan setelah seluruh tahap persetujuan serial yang diwajibkan selesai dan dokumen berada pada versi final yang disetujui. QR harus terikat pada dokumen/versi final, identitas penandatangan, waktu pengesahan, dan mekanisme verifikasi publik/internal.
+- Perubahan atau pembatalan dokumen setelah diterbitkan/ditandatangani tidak boleh menghapus histori atau mengubah dokumen lama secara diam-diam. Untuk lifecycle dokumen, gunakan event/status **BATAL** (membatalkan dokumen/versi yang berlaku) dan **GANTI** (menerbitkan dokumen pengganti yang merujuk dokumen yang dibatalkan), mengikuti prinsip jejak faktur Coretax sebagai analogi pencatatan. Dokumen lama, versi, QR, alasan pembatalan, pelaku, waktu, dan relasi ke dokumen pengganti tetap tersimpan serta dapat diaudit. QR pada dokumen yang berstatus BATAL harus ditampilkan tidak berlaku; dokumen pengganti menjalani workflow dan pengesahan sesuai ketentuan.
+- Istilah BATAL/GANTI adalah aturan lifecycle dokumen ProyekCair, bukan klaim bahwa dokumen ProyekCair merupakan faktur pajak atau terintegrasi dengan Coretax.
 - QR merupakan bukti verifikasi/pengesahan dokumen dalam ProyekCair; jangan menyebutnya tanda tangan elektronik tersertifikasi atau mengklaim kekuatan hukum tertentu kecuali integrasi dan persyaratan hukum terkait benar-benar dipenuhi.
 
 ### 5.2.2 SLA tindakan, notifikasi, dan eskalasi
@@ -340,7 +342,7 @@ Pengawasan bersifat audit/read-oriented. Company Super Admin tidak otomatis menj
 
 ## 5. Model multi-perusahaan dan multi-persona
 
-Satu User Identity dapat memiliki Company Membership di beberapa perusahaan secara bersamaan.
+Satu User Identity dapat memiliki Company Membership di beberapa perusahaan secara bersamaan. **Membership dan persona tidak diwariskan otomatis antarperusahaan**: Company Super Admin masing-masing perusahaan harus mengundang/mengaktifkan identitas tersebut, membuat membership, dan menetapkan satu atau beberapa persona sesuai kebutuhan dan policy perusahaan.
 
 Contoh konseptual:
 
@@ -387,8 +389,7 @@ Tidak ada pendaftaran publik yang otomatis membuat tenant aktif atau memberikan 
 2. Server mengenali atau membuat User Identity berdasarkan identitas provider yang tervalidasi.
 3. Pengguna menerima invitation dari Company Super Admin.
 4. Pengguna membuka undangan dan melakukan redeem menggunakan identitas personalnya.
-5. Server memvalidasi kode, status, masa berlaku, batas penggunaan, perusahaan tujuan, dan ketentuan email/identitas penerima.
-6. Jika valid, server membuat atau mengaktifkan Company Membership dan memberikan persona/role/project scope/authority sesuai konfigurasi undangan.
+5. Server memvalidasi kode, status, masa berlaku, batas penggunaan, perusahaan tujuan, dan ketentuan email/identitas penerima.6. Jika valid, server membuat atau mengaktifkan Company Membership dan memberikan persona/role/project scope/authority sesuai konfigurasi undangan.
 7. Sistem mencatat penerimaan undangan dan perubahan membership ke audit trail.
 8. Pengguna memilih perusahaan dan persona aktif untuk memulai pekerjaan.
 
@@ -518,7 +519,6 @@ Jika salah satu pemeriksaan wajib gagal, keputusan adalah **DENY** (default deny
 - Custom persona/role perusahaan dapat dipertimbangkan pada fase lanjutan, tetapi harus tetap tersusun dari permission yang diizinkan platform dan tidak dapat memperluas privilege secara diam-diam.
 
 ## 9. Status lifecycle
-
 ### 9.1 User Identity
 Status identitas (misalnya active, disabled) mengatur apakah pengguna dapat melakukan autentikasi/akses platform. Status ini terpisah dari membership.
 
@@ -590,6 +590,8 @@ Gunakan foreign key, unique constraint, check constraint, dan indeks yang sesuai
 ## 12. Audit trail
 
 Audit log merupakan catatan append-only yang dapat ditelusuri dan tidak dapat diubah atau dihapus oleh pengguna tenant melalui aplikasi. Koreksi atas kesalahan pencatatan dilakukan dengan event koreksi/kompensasi baru yang merujuk event asal, bukan dengan menimpa histori.
+
+**Kendali perubahan data dan dokumen:** hak CRUD langsung atas data dan profil pihak TTE/QR hanya diberikan kepada persona/role yang secara eksplisit memiliki permission terkait dan scope yang sesuai. Perubahan profil pihak TTE/QR wajib diaudit. Untuk dokumen resmi yang telah diterbitkan atau ditandatangani, jangan menerapkan hard delete atau overwrite histori; perubahan status dilakukan melalui event **BATAL** dan/atau penerbitan dokumen pengganti **GANTI**, dengan seluruh versi dan relasi tetap terlacak.
 
 Audit log untuk aktivitas sensitif minimal mencatat, sepanjang relevan dengan jenis event:
 - ID event audit yang unik dan dibuat oleh sistem;
