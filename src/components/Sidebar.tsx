@@ -1,8 +1,9 @@
 import React from 'react';
 import {useApp} from '../context/AppContext';
-import {LayoutDashboard,Boxes,ArrowLeftRight,WalletCards,FileText,QrCode,Settings,HardHat,AlertCircle,CalendarClock,ClipboardList} from 'lucide-react';
+import {LayoutDashboard,Boxes,ArrowLeftRight,WalletCards,FileText,QrCode,Settings,HardHat,AlertCircle,CalendarClock,ClipboardList,Layers} from 'lucide-react';
 export const Sidebar:React.FC=()=>{const{currentView,setCurrentView,outOfStockCount}=useApp();const navItems=[
 {id:'dashboard',label:'Dashboard Analitik',icon:LayoutDashboard},
+{id:'workspaces',label:'Workspace & Personal Projects',icon:Layers},
 {id:'operations',label:'Operasi Terintegrasi',icon:ClipboardList},
 {id:'project-control',label:'Jadwal, Tambahan & Audit',icon:CalendarClock},
 {id:'inventory',label:'Katalog & Stok Barang',icon:Boxes,badge:outOfStockCount>0?`${outOfStockCount} Kosong`:null},
