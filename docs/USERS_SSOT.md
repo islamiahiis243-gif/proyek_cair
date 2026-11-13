@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 2.1
+- **Versi:** 2.2
 - **Tanggal:** 2026-11-13
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -48,7 +48,7 @@ Istilah berikut harus digunakan secara konsisten dalam kode, database, API, UI, 
 | **Company Super Admin** | Administrator tertinggi pada satu perusahaan, terbatas pada tenant perusahaannya sendiri. |
 | **Pihak Terkait (penunjukan kewenangan)** | User Identity yang telah memiliki Company Membership aktif dan Employee Record pada perusahaan yang menunjuknya, lalu secara eksplisit ditetapkan Company Super Admin sebagai pihak yang berwenang melakukan TTE/pengesahan QR untuk dokumen dan scope tertentu. Penunjukan harus terkait persona, authority, dan masa berlaku yang sah. Pihak eksternal tanpa akun ProyekCair atau tanpa membership pada perusahaan tersebut tidak dapat menjadi final signatory. |
 | **Orang Terkait (relasi orang–perusahaan)** | Catatan hubungan seseorang dengan perusahaan dalam kapasitas legal, kepemilikan, pengendalian, atau manfaat, misalnya pendiri, direktur/CEO, pemegang saham, atau penerima manfaat (*beneficial owner*). Orang tersebut dapat sama sekali tidak mengetahui, menggunakan, atau memiliki akun di ProyekCair; pencatatannya tidak mensyaratkan User Identity, login, membership, persona, atau aktivitas di aplikasi. Konsep ini berbeda dari penunjukan Pihak Terkait sebagai penandatangan. Fitur ini belum termasuk cakupan implementasi saat ini. |
-| **RFIN** | Kode/credential kewenangan kriptografis internal ProyekCair pada tingkat perusahaan, yang terkait dengan identitas, membership, persona, scope, dan kewenangan pengguna. RFIN bukan password login, bukan NPWP, dan bukan pengganti autentikasi User Identity. Detail format dan protokol kriptografinya ditetapkan oleh RFIN Engine. |\n| **RFIN Engine** | Komponen khusus untuk provisioning, pengelolaan, validasi, rotasi/pencabutan, dan pemeriksaan penggunaan RFIN secara aman, tenant-isolated, dan teraudit. |\n| **TTE/QR Privat** | Mekanisme pengesahan/tanda tangan elektronik internal ProyekCair yang akses, tindakan, dan verifikasinya dibatasi untuk pengguna berwenang dalam tenant/scope terkait; bukan layanan verifikasi publik. |\n| **Audit Trail** | Catatan append-only atas aktivitas dan perubahan penting yang dapat ditelusuri. |
+| **RFIN** | Keluarga credential aktivasi/undangan internal ProyekCair yang dibedakan menjadi RFIN-A dan RFIN-B berdasarkan penerbit, penerima, serta tujuan penggunaannya. RFIN bukan password login, bukan NPWP, dan bukan pengganti autentikasi User Identity. |\n| **RFIN-A** | Credential aktivasi awal yang diterbitkan oleh Platform Super Admin kepada perusahaan untuk mengklaim/mengaktifkan satu kursi Company Super Admin pada proses signup/provisioning perusahaan. |\n| **RFIN-B** | Credential undangan yang diterbitkan oleh Company Super Admin kepada user/karyawan perusahaan yang diundang untuk signup dan mengaktifkan Company Membership serta akses awal sesuai konfigurasi undangan. |\n| **RFIN Engine** | Komponen khusus untuk provisioning, pengelolaan, validasi, pencabutan, dan pemeriksaan penggunaan RFIN-A maupun RFIN-B secara aman, tenant-isolated, dan teraudit; kedua jenis credential wajib memiliki alur dan policy terpisah. |\n| **TTE/QR Privat** | Mekanisme pengesahan/tanda tangan elektronik internal ProyekCair yang akses, tindakan, dan verifikasinya dibatasi untuk pengguna berwenang dalam tenant/scope terkait; bukan layanan verifikasi publik. |\n| **Audit Trail** | Catatan append-only atas aktivitas dan perubahan penting yang dapat ditelusuri. |
 
 **Pembedaan wajib:** Persona bukan sinonim Role. Persona menggambarkan kapasitas/konteks yang dipilih; role mengelompokkan izin; permission adalah izin atomik; authority mengatur batas kewenangan bisnis.
 
@@ -88,12 +88,12 @@ Model ini mengadopsi pola penunjukan administrator utama perusahaan seperti yang
 2. Platform Owner atau petugas platform yang diberi kewenangan memeriksa data legal perusahaan dan NPWP serta memastikan perusahaan belum memiliki Company Super Admin aktif.
 3. Setelah disetujui, platform membuat satu registrasi Company Super Admin yang terikat pada satu Company/Tenant.
 4. **NPWP perusahaan menjadi username/identifier perusahaan** pada proses provisioning dan identifikasi akun Company Super Admin. NPWP bukan password, bukan secret, dan tidak boleh dianggap sebagai bukti autentikasi yang cukup.
-5. Platform menerbitkan satu kode aktivasi/undangan perusahaan yang unik, rahasia, berentropi tinggi, memiliki masa berlaku, dan hanya dapat digunakan sesuai ketentuan provisioning. Kode ini berfungsi sebagai bukti aktivasi awal untuk mengklaim kursi Company Super Admin.
+5. Platform menerbitkan satu **RFIN-A** yang unik, rahasia, berentropi tinggi, memiliki masa berlaku, dan hanya dapat digunakan sesuai ketentuan provisioning. RFIN-A diterbitkan oleh Platform Super Admin kepada perusahaan untuk membuktikan hak aktivasi awal dan mengklaim satu kursi Company Super Admin.
 6. Kode aktivasi disampaikan melalui kanal resmi kepada perwakilan perusahaan yang telah diverifikasi. Sistem hanya menyimpan hash kode, bukan nilai plaintext.
 7. Penerima melakukan aktivasi dengan identitas personal yang terverifikasi (misalnya Google/email). Setelah berhasil, kursi Company Super Admin terikat pada User Identity personal tersebut.
 8. Setelah aktivasi, kode tidak dapat digunakan kembali. Pemulihan, penggantian pemegang akun, atau penerbitan kode baru hanya dapat dilakukan melalui prosedur resmi Platform Owner dan wajib diaudit.
 
-Istilah **kode aktivasi perusahaan** adalah istilah resmi internal ProyekCair. Istilah “EFIN” hanya merupakan analogi yang digunakan untuk menjelaskan fungsi kode aktivasi pada proses awal; ProyekCair tidak menyatakan bahwa kode tersebut adalah EFIN DJP atau memiliki fungsi/otoritas perpajakan.
+Istilah resmi credential aktivasi perusahaan adalah **RFIN-A**. RFIN-A bukan credential undangan karyawan. Istilah “EFIN” hanya pernah digunakan sebagai analogi penjelasan dan bukan nama, integrasi, afiliasi, atau kesetaraan dengan credential DJP/Coretax.
 
 **Pemisahan penting:** NPWP mengidentifikasi perusahaan; User Identity personal mengidentifikasi orang yang bertanggung jawab mengoperasikan akun Company Super Admin; kode aktivasi membuktikan hak untuk mengklaim kursi administrator pada proses awal. Ketiganya tidak boleh diperlakukan sebagai satu kredensial bersama.
 
@@ -385,7 +385,7 @@ Tidak ada pendaftaran publik yang otomatis membuat tenant aktif atau memberikan 
 
 1. Pengguna login menggunakan Google atau email.
 2. Server mengenali atau membuat User Identity berdasarkan identitas provider yang tervalidasi.
-3. Pengguna menerima invitation dari Company Super Admin.4. Pengguna membuka undangan dan melakukan redeem menggunakan identitas personalnya.
+3. Pengguna menerima RFIN-B/invitation dari Company Super Admin.\n4. Pengguna membuka undangan dan melakukan redeem menggunakan identitas personalnya.
 5. Server memvalidasi kode, status, masa berlaku, batas penggunaan, perusahaan tujuan, dan ketentuan email/identitas penerima.6. Jika valid, server membuat atau mengaktifkan Company Membership dan memberikan persona/role/project scope/authority sesuai konfigurasi undangan.
 7. Sistem mencatat penerimaan undangan dan perubahan membership ke audit trail.
 8. Pengguna memilih perusahaan dan persona aktif untuk memulai pekerjaan.
