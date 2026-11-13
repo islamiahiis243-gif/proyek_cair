@@ -33,7 +33,7 @@ export const Header: React.FC = () => {
       <div className="hidden md:flex items-center gap-6 text-xs text-slate-500 dark:text-slate-400">
         <div className="flex items-center gap-2">
           <Building2 className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-          <span className="font-medium text-slate-700 dark:text-slate-300">{user.personalWorkspaceId ? 'Akun personal · data proyek legacy' : 'Workspace operasional legacy'}</span>
+          <button onClick={() => setCurrentView('workspaces')} className="font-medium text-blue-700 dark:text-blue-300 hover:underline">Workspace & Projects</button>
         </div>
         <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
         <div className="flex items-center gap-1.5">
