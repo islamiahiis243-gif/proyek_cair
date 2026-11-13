@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 1.2
+- **Versi:** 1.3
 - **Tanggal:** 2026-11-13
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -34,6 +34,11 @@ Istilah berikut harus digunakan secara konsisten dalam kode, database, API, UI, 
 | **Authentication** | Proses membuktikan siapa pengguna melalui penyedia autentikasi. |
 | **Company / Tenant** | Organisasi yang terdaftar di platform dan menjadi batas isolasi data. |
 | **Company Membership** | Hubungan antara satu User Identity dan satu Company, beserta status keanggotaannya. |
+| **Employee Record** | Catatan kepegawaian seseorang dalam satu perusahaan; orang yang sama dapat memiliki record berbeda pada perusahaan berbeda. |
+| **employee_number** | NIK/nomor induk karyawan yang ditetapkan perusahaan masing-masing; bukan ID internal ProyekCair dan bukan kredensial login. |
+| **Organizational Position** | Jabatan struktural seseorang, misalnya Supervisor, Superintendent, atau Manager; berbeda dari persona dan role aplikasi. |
+| **Department / Unit** | Unit organisasi tempat seseorang ditempatkan, misalnya Operasional, Finance, Procurement, atau Head Office. |
+| **Workflow / Approval Chain** | Rangkaian submit, review, verification, approval, rejection, atau return yang dikonfigurasi menurut proses dan kewenangan.
 | **Persona** | Kapasitas/konteks kerja yang dipilih pengguna dalam suatu perusahaan atau cakupan tertentu, misalnya Finance atau Site Engineer. Persona adalah konteks penggunaan, bukan identitas login. |
 | **Role** | Kumpulan izin yang dapat diberikan kepada persona atau keanggotaan. |
 | **Permission** | Izin teknis yang spesifik terhadap tindakan/sumber daya, misalnya `cash.transaction.create`. |
@@ -107,13 +112,18 @@ Rute UI yang disarankan (bukan kontrak URL permanen):
 
 | Menu Console | Fungsi |
 |---|---|
-| **Pengaturan Perusahaan** | Mengelola informasi profil perusahaan, alamat, kontak, data legal pendukung, preferensi, dan pengaturan tenant yang diizinkan. NPWP utama dan status verifikasi hanya dapat diubah melalui prosedur verifikasi resmi jika perubahan berdampak pada identitas legal tenant. |
-| **Undangan Pengguna** | Membuat dan mengirim invitation untuk mengundang orang bergabung ke perusahaan; melihat status undangan; mengatur masa berlaku; membatalkan undangan yang belum digunakan. |
-| **Daftar Pengguna** | Melihat orang yang telah menerima undangan, status membership, dan persona/role yang dimiliki dalam perusahaan. |
-| **Role & Wewenang** | Menetapkan role dan authority setiap orang yang diundang, baik menggunakan template/default yang disediakan platform maupun konfigurasi custom dalam batas kebijakan platform. |
-| **Riwayat / Audit Log** | Melihat histori aktivitas akun Company Super Admin dan aktivitas administrasi tenant, termasuk siapa melakukan apa, kapan, target perubahan, nilai sebelum/sesudah bila relevan, serta hasil tindakan. |
+| **Dashboard Perusahaan** | Ringkasan pengguna/karyawan, proyek, aktivitas barang dan keuangan, antrean pemeriksaan/persetujuan, dokumen tertunda, dan aktivitas yang perlu ditinjau. |
+| **Profil Perusahaan** | Identitas perusahaan, NPWP, informasi legal, alamat, kontak, status verifikasi, dan riwayat perubahan profil. |
+| **Manajemen Pengguna** | Daftar pengguna, undangan, status akun/membership, persona, dan riwayat keanggotaan. |
+| **Manajemen Kepegawaian** | Daftar karyawan, employee_number, status kepegawaian, riwayat jabatan, mutasi, departemen, dan penempatan proyek. |
+| **Struktur Organisasi** | Struktur Head Office, departemen/unit, struktur proyek lapangan, jabatan struktural, atasan langsung, dan riwayat perubahan organisasi. |
+| **Jabatan, Role & Wewenang** | Katalog jabatan, persona, role, permission, matriks wewenang, batas persetujuan, dan penugasan proyek. |
+| **Pengawasan Operasional** | Penelusuran aktivitas barang, keuangan, progres, K3, dokumen, serta pemeriksaan dan persetujuan berjenjang. |
+| **Workflow & Persetujuan** | Konfigurasi alur review/approval berdasarkan jenis proses, proyek, departemen, nominal, jabatan, dan authority dalam guardrail platform. |
+| **Audit & Riwayat Aktivitas** | Pencarian audit lintas modul: CRUD, import/export, pemeriksaan, persetujuan, perubahan akses, login/sesi, dan perubahan data penting. |
+| **Pengaturan Perusahaan** | Preferensi tenant, kebijakan operasional yang diizinkan, notifikasi, dan konfigurasi lain dalam guardrail platform. |
 
-Company Console tidak perlu menjadi panel yang berisi seluruh modul operasional. Fokus utamanya adalah pengaturan perusahaan, undangan, pemberian role/wewenang, dan histori/log akun perusahaan.
+Company Console menjadi pusat tata kelola dan pengawasan, bukan tempat Company Super Admin mengambil alih pekerjaan operasional. Console dapat menyediakan tampilan baca, filter, drill-down, dan audit aktivitas operasional. Hak audit tidak otomatis memberi hak membuat, mengubah, menghapus, memeriksa, atau menyetujui transaksi.
 
 #### 3.2.4 Pengaturan role dan wewenang pengguna undangan
 
@@ -199,6 +209,101 @@ Perusahaan dapat memiliki administrator dengan kewenangan lebih terbatas, misaln
 - Simpan data perusahaan seperlunya, lindungi data sensitif, dan catat perubahan identitas legal.
 - Status verifikasi perusahaan harus dibedakan dari status keanggotaan pengguna. Pengguna tidak otomatis menjadi anggota hanya karena mengetahui NPWP perusahaan.
 
+## 4.1 Identitas kepegawaian dan employee_number
+
+Setiap orang yang dicatat sebagai karyawan perusahaan harus memiliki Employee Record yang terhubung ke User Identity dan Company Membership yang tepat.
+
+- `user_id` adalah ID identitas autentikasi global orang tersebut.
+- `company_id` adalah ID internal tenant/perusahaan.
+- `employee_id` adalah ID internal record kepegawaian orang tersebut di satu perusahaan.
+- `employee_number` adalah NIK/nomor induk karyawan yang ditetapkan atau diberikan oleh perusahaan masing-masing. Nilainya diinput/dikelola melalui administrasi perusahaan, bukan dibuat otomatis oleh ProyekCair.
+- Format `employee_number` mengikuti sistem perusahaan, misalnya `00125`, `MM-00125`, atau `EMP/OPS/025`; format tidak diasumsikan seragam.
+- Terapkan keunikan `UNIQUE(company_id, employee_number)`. Nilai yang sama boleh digunakan oleh perusahaan berbeda.
+- `employee_number` bukan username, password, secret, atau kredensial autentikasi.
+- Satu User Identity yang bekerja pada beberapa perusahaan memiliki Employee Record dan employee_number masing-masing pada setiap perusahaan.
+- Pegawai yang keluar tidak dihapus secara fisik jika telah memiliki histori; statusnya diakhiri/nonaktif dan histori dipertahankan.
+- Perubahan employee_number, status kepegawaian, jabatan, departemen, atasan, dan penempatan harus memiliki histori.
+
+**Aturan auto-generation ID:** seluruh identifier teknis/internal ProyekCair dibuat otomatis oleh aplikasi/backend/database dan tidak dipilih pengguna. Ini mencakup `user_id`, `company_id`, `employee_id`, `persona_id`, `position_id`, `department_id`, `project_id`, `role_id`, `permission_id`, `workflow_id`, `workflow_step_id`, `audit_event_id`, serta ID internal entitas lainnya. Gunakan UUID sebagai default identifier internal. Pengecualian yang disepakati adalah `employee_number`, yang berasal dari perusahaan. Nomor dokumen/transaksi yang mudah dibaca (misalnya `INV-2026-00001`) boleh dibuat otomatis sebagai business/display number, tetapi bukan pengganti UUID primary key.
+
+Relasi antartabel menggunakan UUID internal, bukan employee_number sebagai foreign key. Satu user_id dapat terhubung ke beberapa Employee Record melalui Company Membership berbeda.
+
+## 5.1 Struktur organisasi, departemen, dan jabatan
+
+Struktur organisasi adalah model tersendiri dan tidak boleh disamakan dengan persona atau role aplikasi. Satu perusahaan dapat memiliki struktur Head Office dan struktur proyek lapangan yang berbeda.
+
+Contoh struktur proyek lapangan (template, bukan keharusan):
+```text
+Direktur / CEO
+└── Manager / KTT / Project Manager
+    └── Superintendent
+        └── Supervisor
+            └── Foreman
+                └── Worker
+```
+
+Contoh struktur Head Office (template, bukan keharusan):
+```text
+CEO / Direktur Utama
+└── Direktur Departemen
+    └── General Manager
+        └── Department Head / Manager
+            └── Assistant Manager
+                └── Supervisor
+                    └── Staff
+```
+
+Ketentuan:
+- Contoh tersebut bukan struktur wajib/universal. Perusahaan dapat menambah, mengurangi, mengganti nama, atau mengurutkan jabatan.
+- Struktur proyek lapangan dapat berakhir pada Manager/KTT/Project Manager; jabatan di atasnya dapat berada pada struktur Head Office atau tata kelola korporat.
+- Jabatan/position, departemen/unit, dan relasi atasan-bawahan memiliki ID internal auto-generated serta riwayat masa berlaku.
+- Penempatan karyawan dapat berbeda menurut perusahaan, departemen, proyek, lokasi, dan periode.
+- Atasan langsung dan rantai pelaporan disimpan sebagai relasi organisasi dengan effective date, bukan disimpulkan hanya dari nama jabatan.
+- Posisi direktur dengan lingkup berbeda (misalnya Direktur Operasional dan Direktur Keuangan) harus dapat dibedakan.
+- Perubahan struktur, jabatan, departemen, atasan, atau penempatan tidak boleh mengubah snapshot histori aktivitas terdahulu.
+
+### Pembedaan jabatan, persona, role, permission, dan authority
+
+- **Jabatan/position:** kedudukan struktural, misalnya Supervisor atau Superintendent.
+- **Persona:** kapasitas/konteks saat menggunakan ProyekCair, misalnya Supervisor Proyek A.
+- **Role:** bundel permission aplikasi, misalnya Inventory Reviewer.
+- **Permission:** tindakan teknis atomik, misalnya `inventory.mutation.review`.
+- **Authority:** batas kewenangan bisnis, misalnya persetujuan transaksi sampai nominal tertentu.
+
+Jabatan Supervisor tidak otomatis memberikan semua permission Supervisor, kewenangan persetujuan tanpa batas, atau akses ke seluruh proyek. Otorisasi tetap mengikuti membership, persona, role, permission, authority, atribut, relasi, dan project scope.
+
+## 5.2 Workflow pemeriksaan dan persetujuan berjenjang
+
+ProyekCair harus mendukung workflow yang dapat dikonfigurasi, bukan menanam satu rantai jabatan permanen di kode. Alur dapat berbeda menurut jenis transaksi/dokumen, departemen, proyek, nilai/nominal, kategori, risiko, dan kebijakan perusahaan.
+
+Contoh alur proyek lapangan:
+```text
+Worker / Foreman
+    → Supervisor (input/pemeriksaan)
+    → Superintendent (review/verifikasi)
+    → Manager / KTT / Project Manager (persetujuan sesuai authority)
+    → Selesai
+```
+
+Tahap dapat berupa draft, submit, review, verify, approve, reject, return for revision, resubmit, dan close. Tidak semua proses harus melewati semua jabatan. Head Office dapat memiliki approval chain berbeda. Workflow harus memeriksa penugasan organisasi dan authority saat tindakan dilakukan; jabatan saja tidak cukup.
+
+Setiap workflow instance dan step memiliki ID internal auto-generated. Setiap keputusan tahap menyimpan aktor, user_id, company_id, employee_id, employee_number saat itu (jika tersedia), persona aktif, snapshot jabatan/position, departemen, proyek, tindakan, waktu, catatan/alasan, hasil, dan referensi dokumen/transaksi. Pengulangan tahap menghasilkan event baru; histori tahap sebelumnya tidak ditimpa.
+
+Contoh kategori workflow: laporan progres harian/mingguan, permintaan dan pengeluaran material, transaksi keuangan/pengajuan pembayaran, laporan K3, dokumen resmi, dan perubahan BOQ. Workflow Builder harus dibatasi katalog permission dan guardrail platform.
+
+## 5.3 Pengawasan operasional dalam Company Console
+
+Company Super Admin dapat memperoleh dashboard dan penelusuran audit tenant untuk:
+- aktivitas barang/inventory: create, update, koreksi, void/delete, import, export, dan lampiran;
+- aktivitas keuangan/cash: input, perubahan, pembatalan/koreksi, import/export, serta status pemeriksaan/persetujuan;
+- progres pekerjaan dan pemeriksaan Supervisor/Superintendent/Manager;
+- dokumen resmi, revisi, penerbitan, pembatalan, dan verifikasi;
+- aktivitas K3 dan dokumentasi lapangan;
+- antrean review, verifikasi, approval, revisi, atau eskalasi;
+- aktivitas yang perlu ditinjau, seperti perubahan nilai material, penghapusan, ekspor besar, atau percobaan akses ditolak.
+
+Pengawasan bersifat audit/read-oriented. Company Super Admin tidak otomatis menjadi pembuat, reviewer, atau approver transaksi karena memiliki Console. Jika ia juga bekerja secara operasional, ia menggunakan persona operasional yang sah; audit tetap mencatat identitas dan konteksnya.
+
 ## 5. Model multi-perusahaan dan multi-persona
 
 Satu User Identity dapat memiliki Company Membership di beberapa perusahaan secara bersamaan.
@@ -227,7 +332,6 @@ Ketentuan:
 ### 6.1 Prinsip
 
 Autentikasi berhasil tidak berarti pengguna otomatis memperoleh akses ke data perusahaan. Ada dua jalur provisioning yang berbeda:
-
 1. **Company Super Admin:** hanya melalui permohonan resmi perusahaan kepada pemilik/operator ProyekCair, verifikasi legal/NPWP, dan provisioning satu kursi administrator oleh Platform Super Admin. NPWP menjadi identifier perusahaan; kode aktivasi perusahaan yang unik digunakan untuk mengklaim kursi tersebut dan kemudian diikat ke User Identity personal yang terverifikasi.
 2. **Pengguna anggota perusahaan:** melalui invitation yang dibuat Company Super Admin dari Company Console. Undangan ini memberikan membership dan role/persona/authority sesuai konfigurasi, tetapi tidak pernah memberikan kursi Company Super Admin.
 
@@ -377,8 +481,7 @@ Jika salah satu pemeriksaan wajib gagal, keputusan adalah **DENY** (default deny
 - Permission harus spesifik pada resource dan tindakan, bukan sekadar label menu UI.
 - Authority adalah aturan bisnis tambahan; jangan menyamakan permission `approve` dengan kewenangan menyetujui semua nilai transaksi.
 - Authority dapat mencakup limit nominal, jenis transaksi, tahapan persetujuan, proyek, atau kategori dokumen.
-- Persona/role bawaan adalah template. Company Super Admin dapat mengelola pemberian persona dalam batas katalog dan policy platform.
-- Custom persona/role perusahaan dapat dipertimbangkan pada fase lanjutan, tetapi harus tetap tersusun dari permission yang diizinkan platform dan tidak dapat memperluas privilege secara diam-diam.
+- Persona/role bawaan adalah template. Company Super Admin dapat mengelola pemberian persona dalam batas katalog dan policy platform.- Custom persona/role perusahaan dapat dipertimbangkan pada fase lanjutan, tetapi harus tetap tersusun dari permission yang diizinkan platform dan tidak dapat memperluas privilege secara diam-diam.
 
 ## 9. Status lifecycle
 
@@ -411,6 +514,15 @@ Nama tabel di bawah adalah rekomendasi konseptual. Penamaan final harus diselara
 | `user_identities` | Profil internal yang terhubung ke ID user dari auth provider; satu identity dapat memiliki banyak membership. |
 | `companies` | Registry tenant, termasuk identifier internal, nama legal, NPWP ternormalisasi, status, dan verifikasi. |
 | `company_memberships` | Relasi identity-company, status, tanggal bergabung, dan metadata keanggotaan. |
+| `employee_records` (konseptual) | Record kepegawaian per membership/company, termasuk employee_number dari perusahaan, status, dan masa berlaku. |
+| `departments` | Unit/departemen perusahaan atau proyek. |
+| `organizational_positions` | Katalog jabatan struktural yang dapat dikonfigurasi. |
+| `employee_assignments` | Penempatan karyawan ke departemen, jabatan, atasan, proyek, dan periode efektif. |
+| `organizational_relationships` (konseptual) | Relasi atasan-bawahan/pelaporan dengan periode berlaku. |
+| `workflow_definitions` | Definisi alur review/approval per jenis proses dan scope. |
+| `workflow_steps` | Tahapan, urutan, kondisi, dan aturan aktor/authority. |
+| `workflow_instances` | Instance workflow yang terkait dokumen/transaksi/resource. |
+| `workflow_events` | Event append-only submit, review, verify, approve, reject, return, dan resubmit. |
 | `personas` | Katalog persona/template kapasitas kerja. |
 | `membership_personas` | Persona yang diberikan kepada membership tertentu, termasuk scope dan status. |
 | `roles` | Katalog role. |
@@ -463,9 +575,13 @@ Peristiwa yang wajib diaudit antara lain:
 - perubahan Company Super Admin;
 - perubahan status/verifikasi perusahaan;
 - pergantian persona/perusahaan jika relevan untuk jejak keamanan;
-- tindakan privileged dan percobaan akses yang ditolak.
+- tindakan privileged dan percobaan akses yang ditolak;
+- CRUD dan perubahan data penting pada modul barang, keuangan, progres, K3, dokumen, dan modul operasional lain;
+- import, export, restore, void, koreksi, dan penghapusan;
+- pemeriksaan, verifikasi, persetujuan, penolakan, pengembalian untuk revisi, dan pengajuan ulang;
+- perubahan employee_number, status kepegawaian, jabatan, departemen, atasan, dan penempatan proyek.
 
-Audit log harus append-only bagi pengguna aplikasi biasa. Koreksi administratif harus dilakukan melalui event/koreksi baru, bukan menghapus jejak lama tanpa prosedur khusus.
+Audit log harus append-only bagi seluruh pengguna tenant, termasuk Company Super Admin. Koreksi dilakukan melalui event baru, bukan menghapus jejak lama. Untuk mutasi data, simpan nilai sebelum/sesudah atau diff relevan, target resource, alasan, correlation/request ID, sumber/session/device bila tersedia, dan hasil tindakan. Pencatatan READ diterapkan selektif pada data sensitif/akses berisiko. Snapshot identitas, jabatan, dan penempatan pada waktu event harus immutable sehingga perubahan di masa depan tidak mengubah histori lama.
 
 ## 13. UX dan perilaku aplikasi
 
@@ -478,6 +594,9 @@ Audit log harus append-only bagi pengguna aplikasi biasa. Koreksi administratif 
 - Pengguna dengan delegasi administrasi tenant dapat membuka ProyekCair Console pada tenant tersebut; pengguna tanpa permission administrasi tidak boleh mengakses data atau fungsi Console hanya dengan mengetahui URL.
 - Console dan aplikasi operasional menggunakan identitas autentikasi serta sumber otorisasi yang sama; context switch antara keduanya harus mempertahankan dan memvalidasi tenant/persona aktif.
 - Jika persona dicabut saat pengguna sedang aktif, operasi berikutnya harus ditolak setelah validasi ulang dan sesi/konteks perlu diperbarui.
+- Detail karyawan menampilkan employee_number, status, departemen, jabatan, atasan, penempatan proyek, persona/role, dan riwayat mutasi.
+- Audit dapat difilter berdasarkan waktu, employee_number, pengguna, departemen, jabatan, proyek, modul, tindakan CRUD, status workflow, dan resource.
+- Detail dokumen/transaksi menampilkan timeline pembuat, pemeriksa, verifier, approver, catatan, revisi, dan status setiap tahap.
 
 ## 14. Prinsip implementasi dan migrasi
 
@@ -517,11 +636,21 @@ Rancangan dianggap terimplementasi dengan benar jika pengujian membuktikan bahwa
 13. Transfer/pemulihan kursi Company Super Admin dilakukan oleh Platform Owner/operator berwenang dan seluruh prosesnya diaudit.
 14. Company Super Admin tidak dapat memberikan Platform Super Admin atau melampaui batas policy platform.
 15. Platform Owner dapat memiliki persona operasional tambahan tanpa kehilangan identitas maupun otoritas platform.
-16. Pencabutan/suspensi membership atau persona membuat akses terkait ditolak pada permintaan berikutnya setelah validasi.
-17. Approval limit dan authority policy ditegakkan pada backend, bukan hanya UI.
+16. Pencabutan/suspensi membership atau persona membuat akses terkait ditolak pada permintaan berikutnya setelah validasi.17. Approval limit dan authority policy ditegakkan pada backend, bukan hanya UI.
 18. Semua tindakan administrasi dan mutasi sensitif memiliki audit trail yang dapat ditelusuri.
 19. Uji negatif membuktikan pengguna tidak dapat mengakses tenant/resource lain dengan memanipulasi request, ID, JWT claim, atau state frontend.
 20. RLS dan server-side authorization diuji pada jalur akses langsung maupun RPC.
+21. Setiap Employee Record memiliki employee_id auto-generated dan employee_number yang berasal dari perusahaan.
+22. employee_number unik dalam satu company_id, boleh sama antarperusahaan, dan tidak digunakan sebagai kredensial login atau foreign key.
+23. Seluruh ID internal ProyekCair auto-generated di backend/database; client tidak dapat menentukan ID otoritatif.
+24. Satu User Identity dapat memiliki Employee Record berbeda di beberapa perusahaan tanpa akun autentikasi duplikat.
+25. Struktur Head Office dan proyek lapangan dapat dikonfigurasi terpisah; jabatan, departemen, atasan, dan penempatan memiliki histori.
+26. Jabatan struktural, persona, role, permission, dan authority dipisahkan dan tidak memberi privilege otomatis satu sama lain.
+27. Workflow dapat berbeda menurut proses, departemen, proyek, nominal, dan authority.
+28. Setiap tahap workflow menyimpan aktor dan konteks kepegawaian/persona/organisasi saat tindakan dilakukan.
+29. Audit dapat menelusuri CRUD, import/export, koreksi, void/delete, pemeriksaan, persetujuan, dan revisi pada modul operasional.
+30. Perubahan jabatan, employee_number, departemen, atasan, atau proyek tidak mengubah snapshot histori audit terdahulu.
+31. Company Super Admin dapat meninjau aktivitas tenant tanpa otomatis memperoleh hak operasional untuk mengubah atau menyetujui transaksi.
 
 ## 16. Keputusan yang masih perlu dikonfirmasi
 
@@ -543,6 +672,6 @@ Keputusan detail tersebut tidak boleh mengubah prinsip dasar multi-tenant, multi
 
 **UDU menggunakan arsitektur multi-tenant dengan satu identitas autentikasi per orang, keanggotaan lintas perusahaan, multi-persona per keanggotaan, serta otorisasi hybrid RBAC + ABAC + ReBAC.**
 
-Platform Super Admin mengelola platform; Company Super Admin mengelola tenant perusahaannya. Pengguna login dengan Google/email, sedangkan NPWP mengidentifikasi perusahaan dan kode undangan mengotorisasi proses bergabung. Persona menentukan konteks kerja, role mengelompokkan permission, ABAC membatasi kondisi, ReBAC memeriksa hubungan dan scope, authority mengatur batas kewenangan bisnis, dan audit trail merekam tindakan penting.
+Platform Super Admin mengelola platform; Company Super Admin mengelola tenant perusahaannya. Pengguna login dengan Google/email, sedangkan NPWP mengidentifikasi perusahaan dan kode undangan mengotorisasi proses bergabung. Setiap company_id dan seluruh ID teknis internal dibuat otomatis oleh aplikasi. Setiap karyawan memiliki employee_id internal otomatis dan employee_number/NIK yang ditetapkan perusahaan, unik dalam lingkup company_id. Struktur Head Office dan proyek lapangan dapat berbeda dan dikonfigurasi. Jabatan struktural terpisah dari persona, role, permission, dan authority. Workflow dapat dikonfigurasi menurut proses dan konteks. Audit trail mengikat aktivitas ke user, company, employee_number bila tersedia, jabatan/organisasi saat kejadian, persona, proyek, resource, perubahan, serta histori pemeriksaan dan persetujuan.
 
 **Tidak ada akses tenant tanpa membership yang sah, tidak ada eskalasi privilege melalui undangan perusahaan, dan tidak ada keputusan otorisasi yang hanya ditegakkan oleh frontend.**
