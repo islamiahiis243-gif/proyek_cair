@@ -33,7 +33,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
       }
       const { data: profile, error } = await client
         .from('profiles')
-        .select('id,full_name,role,is_active')
+        .select('id,full_name,role,is_active,personal_workspace_id')
         .eq('id', session.user.id)
         .maybeSingle();
       if (error) {
@@ -57,6 +57,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         avatar_url: session.user.user_metadata?.avatar_url,
         role: roleMap[role] || 'Viewer',
         databaseRole: role,
+        personalWorkspaceId: profile?.personal_workspace_id || undefined,
+        workspaceType: 'PERSONAL',
         provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'guest',
       });
       setAuthed(true);
