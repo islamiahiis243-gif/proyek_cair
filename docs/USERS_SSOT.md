@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 1.4
+- **Versi:** 1.5
 - **Tanggal:** 2026-11-13
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -295,9 +295,14 @@ Persetujuan dokumen/data mengikuti **alur serial (berurutan)** berdasarkan tangg
 
 - Setiap tahap yang diwajibkan harus ditindaklanjuti satu per satu sesuai urutan workflow, misalnya Foreman/Worker → Supervisor → Superintendent → Manager/KTT/Project Manager. Rantai Head Office dapat berbeda sesuai struktur dan kebijakan perusahaan.
 - Pengguna pada tahap aktif meninjau dokumen/data, lalu melakukan tindakan eksplisit melalui aplikasi: approve/agree, reject, atau return for revision sesuai hak dan kebijakan. Klik persetujuan merupakan persetujuan elektronik internal yang tercatat; bukan tanda tangan QR.
-- **QR/tanda tangan pengesahan hanya diterbitkan untuk penandatangan akhir (final signatory) pada tingkat tertinggi yang ditetapkan untuk jenis dokumen/formulir/kontrak tersebut.** Tidak semua reviewer/approver membubuhkan tanda tangan QR.
-- Company Super Admin Console menyediakan konfigurasi penandatangan akhir berdasarkan jenis dokumen, perusahaan/proyek/departemen, dan konteks kewenangan. Platform dapat menyediakan default/template dan guardrail. Penunjukan harus merujuk pada identitas pengguna/employee record yang sah, jabatan, persona/role, authority, dan scope; bukan sekadar nama bebas.
-- Contoh: pengguna A dapat ditetapkan sebagai penandatangan akhir untuk jenis laporan, formulir, atau kontrak tertentu. Penetapan tersebut tidak otomatis menjadikannya penandatangan untuk semua jenis dokumen atau semua proyek.
+- **QR/tanda tangan pengesahan hanya diterbitkan oleh penandatangan akhir (final signatory)** setelah seluruh tahap persetujuan serial selesai. Tidak semua reviewer/approver membubuhkan tanda tangan QR.
+- **Default penandatangan akhir untuk workflow proyek maupun departemen adalah Manager / KTT / Project Manager**, sesuai struktur organisasi dan konteks proses. Default ini merupakan template awal, bukan aturan jabatan yang kaku atau hard-coded.
+- **Company Super Admin dapat meng-custom penunjukan final signatory** melalui Company Console berdasarkan perusahaan, jenis dokumen/formulir/kontrak, proyek, departemen, unit, atau scope lain yang diizinkan policy. Konfigurasi dapat menunjuk orang yang berbeda untuk jenis dokumen atau scope yang berbeda; tidak harus selalu pemegang jabatan default.
+- Penunjukan harus mengikat ke User Identity dan Employee Record/membership yang sah, serta memvalidasi jabatan/position, persona/role, authority, ruang lingkup, masa berlaku, dan status aktif. Nama yang diketik bebas tidak cukup sebagai dasar otorisasi.
+- **Seseorang dapat ditunjuk sebagai final signatory oleh Company Super Admin di beberapa perusahaan sekaligus**, selama masing-masing perusahaan secara terpisah memberikan penunjukan dan scope kewenangan yang jelas. Dengan demikian satu identitas personal dapat memiliki otoritas pengesahan tertentu di Perusahaan A, B, dan C tanpa membuat akun login duplikat.
+- Contoh konseptual: seseorang yang memiliki otoritas menandatangani dokumen tertentu melalui Coretax pada beberapa perusahaan dapat dianalogikan sebagai pihak yang ditunjuk masing-masing Company Super Admin ProyekCair untuk mengesahkan jenis dokumen tertentu pada tenant mereka. **Coretax hanya contoh pola penunjukan lintas perusahaan; ProyekCair tidak mengklaim integrasi, afiliasi, atau kesetaraan kewenangan perpajakan dengan Coretax/DJP.**
+- Penunjukan lintas perusahaan tidak memberikan akses otomatis ke tenant lain, tidak memperluas kewenangan ke semua dokumen, dan tidak menggantikan proses persetujuan serial internal perusahaan. Otoritas final signatory selalu spesifik pada perusahaan dan scope penunjukannya.
+- Penetapan, perubahan, penangguhan, pencabutan, dan penggunaan kewenangan final signatory wajib dicatat dalam audit trail, termasuk pihak yang menunjuk, pihak yang ditunjuk, tenant, jenis dokumen, scope, authority, masa berlaku, dan waktu tindakan.
 - Final signatory baru dapat melakukan pengesahan setelah seluruh tahap persetujuan serial yang diwajibkan selesai dan dokumen berada pada versi final yang disetujui. QR harus terikat pada dokumen/versi final, identitas penandatangan, waktu pengesahan, dan mekanisme verifikasi publik/internal. Perubahan dokumen setelah pengesahan harus membatalkan/menandai QR lama tidak berlaku dan memerlukan proses revisi serta pengesahan ulang.
 - QR merupakan bukti verifikasi/pengesahan dokumen dalam ProyekCair; jangan menyebutnya tanda tangan elektronik tersertifikasi atau mengklaim kekuatan hukum tertentu kecuali integrasi dan persyaratan hukum terkait benar-benar dipenuhi.
 
