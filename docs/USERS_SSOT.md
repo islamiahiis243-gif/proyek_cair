@@ -139,7 +139,7 @@ Aturan custom:
 - Invitation anggota bukan kode aktivasi Company Super Admin dan tidak dapat membuat Company Super Admin kedua.
 - Invitation memberikan membership dan role/persona/authority awal sesuai konfigurasi undangan.
 - Company Super Admin dapat mengubah, menangguhkan, atau mencabut akses pengguna yang diundang dalam batas policy.
-- Pengguna yang diundang tidak otomatis memperoleh akses Console. Akses Console hanya dimiliki kursi Company Super Admin tunggal, kecuali platform kelak menetapkan delegasi administratif terbatas yang terpisah dan bukan Company Super Admin.
+- Pengguna yang diundang tidak otomatis memperoleh akses Console. Akses penuh Console hanya dimiliki pemegang kursi Company Super Admin tunggal. Jika kelak dibutuhkan bantuan administratif, platform dapat merancang permission delegasi yang sangat terbatas secara terpisah; delegasi tersebut bukan Company Super Admin dan tidak boleh mengubah aturan satu akun utama.
 
 #### 3.2.6 Penggantian dan pemulihan Company Super Admin
 
@@ -515,13 +515,13 @@ Rancangan dianggap terimplementasi dengan benar jika pengujian membuktikan bahwa
 11. Company Super Admin dapat mengundang anggota dan mengatur role/wewenang default atau custom hanya dalam batas policy platform.
 12. Tidak ada invitation anggota yang dapat menciptakan Company Super Admin kedua.
 13. Transfer/pemulihan kursi Company Super Admin dilakukan oleh Platform Owner/operator berwenang dan seluruh prosesnya diaudit.
-11. Company Super Admin tidak dapat memberikan Platform Super Admin atau melampaui batas policy platform.
-12. Platform Owner dapat memiliki persona operasional tambahan tanpa kehilangan identitas maupun otoritas platform.
-13. Pencabutan/suspensi membership atau persona membuat akses terkait ditolak pada permintaan berikutnya setelah validasi.
-14. Approval limit dan authority policy ditegakkan pada backend, bukan hanya UI.
-15. Semua tindakan administrasi dan mutasi sensitif memiliki audit trail yang dapat ditelusuri.
-16. Uji negatif membuktikan pengguna tidak dapat mengakses tenant/resource lain dengan memanipulasi request, ID, JWT claim, atau state frontend.
-17. RLS dan server-side authorization diuji pada jalur akses langsung maupun RPC.
+14. Company Super Admin tidak dapat memberikan Platform Super Admin atau melampaui batas policy platform.
+15. Platform Owner dapat memiliki persona operasional tambahan tanpa kehilangan identitas maupun otoritas platform.
+16. Pencabutan/suspensi membership atau persona membuat akses terkait ditolak pada permintaan berikutnya setelah validasi.
+17. Approval limit dan authority policy ditegakkan pada backend, bukan hanya UI.
+18. Semua tindakan administrasi dan mutasi sensitif memiliki audit trail yang dapat ditelusuri.
+19. Uji negatif membuktikan pengguna tidak dapat mengakses tenant/resource lain dengan memanipulasi request, ID, JWT claim, atau state frontend.
+20. RLS dan server-side authorization diuji pada jalur akses langsung maupun RPC.
 
 ## 16. Keputusan yang masih perlu dikonfirmasi
 
