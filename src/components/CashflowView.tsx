@@ -44,6 +44,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
   const [receipt, setReceipt] = useState('');
   const [notes, setNotes] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submitting,setSubmitting]=useState(false);
 
   React.useEffect(() => {
     if (defaultType) {
@@ -89,6 +90,8 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
 
   const handleSubmitCash = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(submitting)return;
+    setSubmitting(true);
     setErrorMessage(null);
 
     if (amount <= 0) {
@@ -101,7 +104,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
       return;
     }
 
-    const res = await addCashMutation({
+    try { const res = await addCashMutation({
       jenis,
       jumlah_rp: Number(amount),
       untuk_apa: purpose.trim(),
@@ -118,6 +121,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
     }
 
     setIsModalOpen(false);
+    } finally { setSubmitting(false); }
   };
 
   if (modalOnly && (!isModalOpen || !cashWriteAccess)) {
@@ -513,13 +517,14 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
                 </button>
                 <button
                   type="submit"
+                  disabled={submitting}
                   className={`px-4 py-2 text-xs font-semibold text-white rounded-lg shadow-sm transition-colors ${
                     jenis === 'MASUK'
                       ? 'bg-emerald-600 hover:bg-emerald-700'
                       : 'bg-rose-600 hover:bg-rose-700'
                   }`}
                 >
-                  Simpan Transaksi Kas
+                  {submitting?'Menyimpan…':'Simpan Transaksi Kas'}
                 </button>
               </div>
             </form>
