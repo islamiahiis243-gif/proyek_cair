@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 1.8
+- **Versi:** 1.9
 - **Tanggal:** 2026-11-13
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -35,11 +35,10 @@ Istilah berikut harus digunakan secara konsisten dalam kode, database, API, UI, 
 | **Company / Tenant** | Organisasi yang terdaftar di platform dan menjadi batas isolasi data. |
 | **Company Membership** | Hubungan antara satu User Identity dan satu Company, beserta status keanggotaannya. |
 | **Employee Record** | Catatan kepegawaian seseorang dalam satu perusahaan; orang yang sama dapat memiliki record berbeda pada perusahaan berbeda. |
-| **employee_number** | NIK/nomor induk karyawan yang ditetapkan perusahaan masing-masing; bukan ID internal ProyekCair dan bukan kredensial login. |
+| **employee_number** | Nomor Induk Karyawan (Employee Number) yang ditetapkan perusahaan masing-masing; bukan Nomor Induk Kependudukan (NIK), bukan ID internal ProyekCair, dan bukan kredensial login. |
 | **Organizational Position** | Jabatan struktural seseorang, misalnya Supervisor, Superintendent, atau Manager; berbeda dari persona dan role aplikasi. |
 | **Department / Unit** | Unit organisasi tempat seseorang ditempatkan, misalnya Operasional, Finance, Procurement, atau Head Office. |
-| **Workflow / Approval Chain** | Rangkaian submit, review, verification, approval, rejection, atau return yang dikonfigurasi menurut proses dan kewenangan.
-| **Persona** | Kapasitas/konteks kerja yang dipilih pengguna dalam suatu perusahaan atau cakupan tertentu, misalnya Finance atau Site Engineer. Persona adalah konteks penggunaan, bukan identitas login. |
+| **Workflow / Approval Chain** | Rangkaian submit, review, verification, approval, rejection, atau return yang dikonfigurasi menurut proses dan kewenangan. || **Persona** | Kapasitas/konteks kerja yang dipilih pengguna dalam suatu perusahaan atau cakupan tertentu, misalnya Finance atau Site Engineer. Persona adalah konteks penggunaan, bukan identitas login. |
 | **Role** | Kumpulan izin yang dapat diberikan kepada persona atau keanggotaan. |
 | **Permission** | Izin teknis yang spesifik terhadap tindakan/sumber daya, misalnya `cash.transaction.create`. |
 | **Authority** | Batas kewenangan bisnis, misalnya limit persetujuan nominal, jenis persetujuan, atau tingkat otorisasi. |
@@ -218,7 +217,8 @@ Setiap orang yang dicatat sebagai karyawan perusahaan harus memiliki Employee Re
 - `company_id` adalah ID internal tenant/perusahaan.
 - `employee_id` adalah ID internal record kepegawaian orang tersebut di satu perusahaan.
 - `employee_number` adalah NIK/nomor induk karyawan yang ditetapkan atau diberikan oleh perusahaan masing-masing. Nilainya diinput/dikelola melalui administrasi perusahaan, bukan dibuat otomatis oleh ProyekCair.
-- Format `employee_number` mengikuti sistem perusahaan, misalnya `00125`, `MM-00125`, atau `EMP/OPS/025`; format tidak diasumsikan seragam.- Terapkan keunikan `UNIQUE(company_id, employee_number)`. Nilai yang sama boleh digunakan oleh perusahaan berbeda.
+- Format `employee_number` mengikuti sistem perusahaan, misalnya `00125`, `MM-00125`, atau `EMP/OPS/025`; format tidak diasumsikan seragam.
+- Terapkan keunikan `UNIQUE(company_id, employee_number)`. Nilai yang sama boleh digunakan oleh perusahaan berbeda.
 - `employee_number` bukan username, password, secret, atau kredensial autentikasi.
 - Satu User Identity yang bekerja pada beberapa perusahaan memiliki Employee Record dan employee_number masing-masing pada setiap perusahaan.
 - Pegawai yang keluar tidak dihapus secara fisik jika telah memiliki histori; statusnya diakhiri/nonaktif dan histori dipertahankan.
@@ -470,7 +470,8 @@ ABAC membatasi keputusan berdasarkan atribut/kondisi seperti:
 - project ID;
 - status membership;
 - status proyek atau dokumen;
-- nilai transaksi dan approval limit;- status/verifikasi perusahaan;
+- nilai transaksi dan approval limit;
+- status/verifikasi perusahaan;
 - pemilik atau pembuat resource;
 - waktu atau kondisi operasional jika benar-benar diperlukan.
 
@@ -483,7 +484,7 @@ ReBAC mengevaluasi hubungan antarentitas, misalnya:
 - user ditugaskan ke proyek;
 - user merupakan anggota tim proyek;
 - user ditunjuk sebagai approver suatu dokumen/transaksi;
-- perusahaan menjadi pemilik atau pihak terkait pada suatu resource.
+- perusahaan menjadi pemilik suatu resource atau memiliki hubungan penunjukan kewenangan yang relevan terhadap resource tersebut.
 
 Contoh: Site Engineer hanya dapat mengakses proyek tempat ia terdaftar sebagai anggota proyek, sekalipun role Site Engineer memiliki permission membaca progres.
 
@@ -513,7 +514,8 @@ Jika salah satu pemeriksaan wajib gagal, keputusan adalah **DENY** (default deny
 - Permission harus spesifik pada resource dan tindakan, bukan sekadar label menu UI.
 - Authority adalah aturan bisnis tambahan; jangan menyamakan permission `approve` dengan kewenangan menyetujui semua nilai transaksi.
 - Authority dapat mencakup limit nominal, jenis transaksi, tahapan persetujuan, proyek, atau kategori dokumen.
-- Persona/role bawaan adalah template. Company Super Admin dapat mengelola pemberian persona dalam batas katalog dan policy platform.- Custom persona/role perusahaan dapat dipertimbangkan pada fase lanjutan, tetapi harus tetap tersusun dari permission yang diizinkan platform dan tidak dapat memperluas privilege secara diam-diam.
+- Persona/role bawaan adalah template. Company Super Admin dapat mengelola pemberian persona dalam batas katalog dan policy platform.
+- Custom persona/role perusahaan dapat dipertimbangkan pada fase lanjutan, tetapi harus tetap tersusun dari permission yang diizinkan platform dan tidak dapat memperluas privilege secara diam-diam.
 
 ## 9. Status lifecycle
 
@@ -587,6 +589,29 @@ Gunakan foreign key, unique constraint, check constraint, dan indeks yang sesuai
 
 ## 12. Audit trail
 
-Audit log untuk aktivitas sensitif minimal mencatat:
-- actor user identity;
-- company/tenant;
+Audit log merupakan catatan append-only yang dapat ditelusuri dan tidak dapat diubah atau dihapus oleh pengguna tenant melalui aplikasi. Koreksi atas kesalahan pencatatan dilakukan dengan event koreksi/kompensasi baru yang merujuk event asal, bukan dengan menimpa histori.
+
+Audit log untuk aktivitas sensitif minimal mencatat, sepanjang relevan dengan jenis event:
+- ID event audit yang unik dan dibuat oleh sistem;
+- waktu kejadian (timestamp) yang ditetapkan server, serta waktu penerimaan/pemrosesan bila berbeda;
+- actor User Identity (`user_id`) dan identitas autentikasi/provider yang relevan tanpa menyimpan token atau secret;
+- company/tenant (`company_id`) dan project/resource scope yang relevan;
+- Employee Record (`employee_id`, `employee_number`) jika tersedia dan relevan; ketiadaan Employee Record tidak boleh diisi dengan data rekaan;
+- persona aktif, role/permission efektif, dan authority/scope yang digunakan saat tindakan;
+- jenis event, nama aksi, objek/resource yang terdampak, dan ID objek;
+- hasil tindakan (berhasil/ditolak/gagal), status sebelum dan sesudah bila relevan;
+- perubahan nilai sebelum/sesudah untuk field penting, dengan redaksi atau pengecualian bagi secret, token, kredensial, dan data sensitif yang tidak perlu disalin;
+- alasan/catatan wajib untuk tindakan berisiko tinggi, koreksi, void, revoke, override, delegasi, dan perubahan kewenangan;
+- sumber tindakan (misalnya UI, API, RPC, proses sistem) dan correlation/request ID bila tersedia;
+- alamat IP, user-agent, dan metadata keamanan lain hanya jika diperlukan, proporsional, dan sesuai kebijakan privasi/retensi.
+
+Untuk workflow dan pengesahan dokumen, audit juga harus mencatat:
+- workflow instance/step, urutan tahap, aktor yang bertindak, keputusan, catatan, dan waktu;
+- SLA/due date yang berlaku pada saat tahap dimulai, reminder, escalation, delegation/substitution, serta alasan keterlambatan;
+- penunjukan final signatory: pihak yang menunjuk, pihak yang ditunjuk, tenant, jenis dokumen, scope, authority, masa berlaku, status, dan histori perubahan;
+- final signing event: identitas penandatangan, versi/hash dokumen yang disahkan, waktu pengesahan, identitas QR/verifikasi, serta status validitas pengesahan;
+- verification event: waktu verifikasi, referensi dokumen/versi, hasil pemeriksaan, dan kanal verifikasi tanpa membocorkan data yang tidak semestinya.
+
+Audit wajib mencakup sekurang-kurangnya login dan kegagalan akses yang relevan, provisioning/aktivasi Company Super Admin, invitation dan redemption, perubahan membership/persona/role/permission/authority, perubahan struktur organisasi dan penempatan, CRUD/import/export, transaksi, approval/rejection/return, penerbitan/revisi/pembatalan dokumen, final signing, verifikasi QR, serta tindakan administratif Platform Owner.
+
+Akses baca audit log juga harus dibatasi berdasarkan tenant dan kewenangan. Platform-level audit dapat diakses hanya oleh otoritas platform yang berwenang. Retensi, ekspor, dan perlindungan integritas audit harus ditetapkan melalui kebijakan platform. Jangan menyimpan password, kode aktivasi plaintext, token sesi, secret, atau data autentikasi sensitif dalam audit log.
