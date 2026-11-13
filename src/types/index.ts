@@ -96,6 +96,8 @@ export interface UserProfile {
   role: 'Admin' | 'Project Manager' | 'Logistik & Gudang' | 'Site Manager' | 'Finance' | 'Auditor' | 'Viewer';
   provider: 'google' | 'guest';
   databaseRole?: string;
+  personalWorkspaceId?: string;
+  workspaceType?: 'PERSONAL' | 'COMPANY';
 }
 
 export interface SupabaseConfig {
