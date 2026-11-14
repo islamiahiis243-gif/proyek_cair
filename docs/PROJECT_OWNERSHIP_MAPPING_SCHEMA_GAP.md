@@ -38,7 +38,7 @@ Karena itu:
 | Live read-only count/group queries, 2026-11-14 | Row counts dan distribusi `audit_logs`, `project_personnel`, `boq_items` | Tidak membuktikan tenant owner |
 | `docs/ARCHITECTURE_AUDIT_AND_MIGRATION_PLAN.md` | Tidak ada pemindahan data operasional; BOQ/audit harus dipertahankan; legacy project masih belum ditetapkan workspace-nya | Snapshot dokumen 2026-11-13; beberapa jumlah sudah berubah |
 | `docs/WORKSPACE_PHASE_2_3_IMPLEMENTATION.md` | Personal/Company foundation, RFIN, dan batas data legacy; klarifikasi 2026-11-14 menetapkan CV Menara Megah sebagai tenant UDU dan PT IMK sebagai client | Snapshot implementasi belum membuktikan Company Workspace sudah diprovisioning |
-| `docs/USERS_SSOT.md` v3.0 | Tenant, membership, project scope, permission model, permission baseline per modul | Menentukan target authorization, bukan bukti data historis |
+| `docs/USERS_SSOT.md` v3.1 | Tenant, membership, project scope, permission model, permission baseline per modul | Menentukan target authorization, bukan bukti data historis |
 | `implementation_plan.md` yang diunggah | Kebutuhan domain: BOQ, barang, progres, kas, K3, dokumen, roster, offline cache | Beberapa konsepnya adalah target produk, bukan nama/kolom schema aktual; keputusan QR publik bertentangan dengan SSOT dan tidak diikuti |
 
 ### 2.1 Perbedaan angka antar snapshot
