@@ -6,6 +6,25 @@ The project follows the business and security decisions in [USERS_SSOT.md](docs/
 
 ## [Unreleased] — 2026-11-14
 
+### 2026-11-14 20:04 WIB — SSOT v3.1 review and guarded operational Project RLS
+
+- Re-read docs/USERS_SSOT.md v3.1 and checked tenant/project/client boundaries, active Company and Project Membership requirements, explicit permission grants, append-only audit expectations, and private QR/TTE restrictions.
+- Applied production migrations:
+  - 20261114125949_add_guarded_operational_project_rls
+  - 20261114130212_lock_down_scope_control_table_rls
+  - 20261114130400_separate_roster_management_permission
+- Installed 80 restrictive project-scope policies over the 16 operational tables, anonymous deny policies, parent-scope inheritance/mismatch guards, Storage project-folder guards, audit_logs scope columns, readiness reporting, and a Platform-Super-Admin-only one-way activation RPC.
+- Added explicit permission codes project.media.create, inventory.location.manage, and personnel.roster.manage. Roster management is distinct from Auth identities and Company/Project Memberships.
+- The scope gate defaults to OFF. This preserves legacy reads until canonical mapping is complete; no claim is made that full cross-tenant isolation is active yet.
+- Added supabase/tests/operational_project_scope_guardrails.sql and docs/UDU_CROSS_PROJECT_RLS_TEST_PLAN.md.
+- Verification passed: 16/16 operational tables RLS-enabled; 80 restrictive scope policies present; 8 parent-scope triggers present; 76 active catalog permissions; authenticated compatibility reads preserved for 280 BOQ items, 39 BOQ sections, 1 project_control row, and 13 roster rows.
+- A rollback-only transaction simulated gate ON and confirmed all four categories of unscoped legacy rows became invisible (0 rows visible); transaction rolled back and production gate remains OFF.
+- Live activation readiness currently reports 280 unscoped BOQ items, 39 sections, 1 project_control row, 13 personnel rows, and 1,107 unscoped audit events. Five legacy SECURITY DEFINER mutation RPCs remain executable to authenticated users and block activation.
+- **Not completed:** external NPWP key backup/retrieval/recovery (no connected external secret-manager provider or second custodian); CV Menara Megah onboarding/claim; canonical Project UDU and PT IMK CLIENT relationship; ledger backfill; frontend active-project context and Storage path migration; scoped replacements for legacy mutation RPCs; appointed signatory workflow; live two-Project positive/negative tests.
+- No dummy records or fake users/projects were created. No existing operational rows or audit events were rewritten. The scope gate was not activated.
+- Timestamp uses project local time (WIB, UTC+7).
+
+
 ### 2026-11-14 19:22 WIB — NPWP key custody runbook
 
 - Added docs/NPWP_KEY_BACKUP_RECOVERY_RUNBOOK.md with procedures for the Proyek Cair NPWP application master key and the separate Supabase-managed Vault root encryption key.
