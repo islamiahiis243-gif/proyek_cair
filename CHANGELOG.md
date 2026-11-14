@@ -16,6 +16,8 @@ No Supabase staging branch was created. The user explicitly requested direct rem
 - `20261114120315_enforce_company_project_workspace_integrity`
 - `20261114120617_fix_company_review_and_claim_semantics`
 - `20261114120901_complete_npwp_constraints_and_project_client_writes`
+- `20261114121050_add_project_permission_catalog`
+- `20261114121141_enforce_explicit_project_permissions`
 
 ### Added / Changed
 
@@ -36,9 +38,10 @@ No Supabase staging branch was created. The user explicitly requested direct rem
    - Existing RFIN-B activation is limited to already-active Companies.
 
 3. **Canonical Project Registry and permission scope foundation**
-   - Added `projects`, `project_client_relationships`, `project_memberships`, and `project_membership_permissions`.
+   - Added `projects`, `project_client_relationships`, `project_memberships`, `project_membership_permissions`, and a canonical `project_permission_catalog` based on USERS_SSOT.md §18.2.
    - Added RLS to all four registry/relationship/membership tables; Company Super Admin client-relationship CRUD is enabled through the table's RLS policy.
-   - Project creation and membership assignment use guarded RPCs; exposed PostgREST wrappers are `SECURITY INVOKER`, while privileged implementation functions remain in the non-exposed `private` schema.
+   - Project creation and membership assignment use guarded RPCs; assignment accepts only active catalog permissions. Exposed PostgREST wrappers are `SECURITY INVOKER`, while privileged implementation functions remain in the non-exposed `private` schema.
+   - Project Super Admin seat does not automatically grant all operational permissions: project operations require explicit active project permission assignments. Company Super Admin remains able to administer project membership and client relationships.
    - Composite foreign keys enforce workspace/company membership consistency and project/workspace consistency.
    - Added nullable paired `workspace_id` and `project_id` columns plus indexes and integrity constraints to 16 legacy operational tables: `project_control`, BOQ, schedules, inventory, cash, progress, safety, media, documents/signatures, attachments, and personnel.
    - Existing operational rows were not backfilled. Operational-table RLS cutover remains pending until the canonical project IDs and reviewed ledger mapping are available; this migration does not claim cross-tenant isolation is complete for legacy operational data.
@@ -50,12 +53,12 @@ No Supabase staging branch was created. The user explicitly requested direct rem
 
 ### Verification
 
-- All six migrations appear in the live Supabase migration history.
+- All eight migrations appear in the live Supabase migration history.
 - Platform review private implementation is executable only through the guarded Platform Super Admin path; the permission grant and wrapper were verified.
 - NPWP encryption/decryption round-trip test passed using synthetic test digits; normalization test returned 15 digits.
 - Vault master-key presence verified without exposing the key.
 - NPWP ciphertext is not selectable by the `authenticated` role in either applications or companies.
-- Unique NPWP fingerprint index exists; all four Project Registry tables have RLS enabled.
+- Unique NPWP fingerprint index exists; all four Project Registry tables and the project permission catalog have RLS enabled. Permission assignments are FK-bound to the active catalog.
 - All 16 listed legacy operational tables now have both scope columns.
 - Existing production counts remain unchanged: `companies=0`, `company_registration_requests=0`, `company_memberships=0`, `projects=0`. No tenant, user, membership, project, or legacy operational row was created or reassigned.
 - Security Advisor no longer flags the three newly added public onboarding/project RPC wrappers as exposed `SECURITY DEFINER` functions. Six pre-existing operational `SECURITY DEFINER` RPC warnings and disabled leaked-password protection remain for separate remediation.
