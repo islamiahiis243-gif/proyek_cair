@@ -1128,18 +1128,6 @@ Keputusan tersebut harus dituangkan pada katalog permission, frontend-backend co
 - Menegaskan kembali TTE/QR privat, non-publik, dan batas akses tenant; tidak mengubah keputusan tentang approval serial, notifikasi paralel, atau akses scan/verifikasi privat.
 
 
-### Versi 2.5 — 2026-11-14
-- Memperjelas Company Identity Registration berbasis nama perusahaan, NPWP, business email, identitas pemohon, dan pernyataan kebenaran; membedakan deklarasi/pemeriksaan format dari verifikasi legal independen, serta menegaskan ProyekCair bukan otoritas pemerintah.
-- Menambahkan Workspace Switcher di Navbar untuk Personal/Umum, daftar perusahaan yang memiliki membership sah, dan persona yang ditugaskan; server-side context tetap menjadi sumber otorisasi.
-- Menetapkan pendekatan Company Console berbasis penugasan individu dan menghapus Org Structure Builder/departemen/divisi/bagan organisasi sebagai kebutuhan wajib; Employee Record hanya untuk kebutuhan operasional tertentu dan Project Membership/Scope tetap wajib.
-- Menegaskan label jabatan/approval level merupakan preset/atribut deskriptif yang dapat disesuaikan perusahaan, bukan pemberi permission atau authority otomatis.
-- Memperjelas bahwa seluruh approver menerima notifikasi secara paralel, sedangkan eksekusi approve/reject/return tetap serial dan hanya step aktif yang dapat bertindak; pembuat dokumen dapat memilih urutan approver per dokumen dengan validasi backend.
-- Menyelaraskan penunjukan final signatory/TTE/QR: perusahaan bertanggung jawab atas verifikasi dan pemilihan internal; syarat platform adalah User Identity terautentikasi dan Company Membership aktif yang didaftarkan Company Super Admin. Tidak ada persyaratan jabatan/senioritas atau KTP/NIK/KYC independen oleh ProyekCair.
-- Menegaskan kembali TTE/QR privat, non-publik, dan batas akses tenant; tidak mengubah keputusan tentang approval serial, notifikasi paralel, atau akses scan/verifikasi privat.
-
-
-## 17. Changelog
-
 ### Versi 2.4 — 2026-11-14
 - Menambahkan Workspace Architecture Specification untuk empat pengalaman: Platform Super Admin, Company Super Admin Console, Company Operational/Persona, dan Personal Workspace (General User Type B).
 - Menegaskan bahwa Persona Workspace adalah pengalaman operasional dalam Company/Tenant, bukan tenant atau jenis kepemilikan terpisah.
