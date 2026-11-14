@@ -2,7 +2,7 @@
 
 **Baseline:** USERS_SSOT.md v3.1  
 **Status:** Test matrix prepared; live two-Project execution is BLOCKED until CV Menara Megah is onboarded, Project UDU is provisioned, and a second real Project exists.  
-**Last updated:** 2026-11-14 20:04 WIB
+**Last updated:** 2026-11-14 20:24 WIB
 
 ## Safety rules
 
@@ -43,7 +43,16 @@ Use:
 | RLS-15 | Member A | Upload project evidence under Project B's UUID prefix | Denied |
 | RLS-16 | Member A | Invoke legacy SECURITY DEFINER mutation RPC without project-aware scope | RPC unavailable or rejected; never bypass scope |
 | RLS-17 | Company Super Admin / appointed signatory | Create a document signature | Allowed only after active signatory appointment, document-level authority, and project scope checks are implemented |
-| RLS-18 | Project Member with project.read only | Export audit logs | Denied; requires audit.export, distinct from audit.read |
+| RLS-18 | Project Member with project.read only | Export audit logs | Denied; requires audit.export, distinct from audit.read |\n| RLS-19 | Anonymous caller | SELECT documents, document_signatures, or public_document_verification; call QR RPC | Denied by missing table/view grants and missing RPC EXECUTE; must reveal no document existence |\n| RLS-20 | Authenticated user without document.qr.scan or document.qr.verify | Submit a valid document token to private QR RPC | Generic no-result response; no document metadata is returned; denied scan is appended to audit_logs |\n| RLS-21 | Active member with both QR permissions in matching Project | Submit a valid issued/signed document token | Minimal verification metadata returned and DOCUMENT_QR_VERIFY_SUCCESS audit event appended |
+
+## Private QR verification controls (implemented)
+
+- `/verify` is now wrapped by AuthGate and no longer uses anonymous document access.
+- The public verification view is no longer selectable by anon or authenticated; the frontend calls an authenticated invoker RPC.
+- The private implementation requires both active `document.qr.scan` and `document.qr.verify` project permissions; it relies on active Company Membership + Project Membership and active catalog entries.
+- Success and denial attempts are appended to audit_logs with no raw QR token; unknown tokens do not disclose a document reference.
+- Anonymous table privileges were revoked from documents and document_signatures, the old public-verify RLS policy was removed, and the evidence bucket remains private.
+- No documents or canonical Projects currently exist, so RLS-19 was checked at privilege level and no-result authenticated RPC behavior was tested, but RLS-21 cannot yet be exercised against real records. RLS-20's denied outcome branch requires a real authenticated user and document; this remains pending.
 
 ## Current verification already performed
 
@@ -64,6 +73,6 @@ The Platform Super Admin activation RPC must reject cutover until:
 - the five legacy SECURITY DEFINER mutation RPCs have been replaced with scoped versions or had authenticated EXECUTE revoked after callers are migrated;
 - frontend CRUD and offline synchronization carry the validated active project context;
 - document-signature creation checks active signatory appointment, project permission, document state, and authority level;
-- RLS-01 through RLS-18 pass using real records and real active identities.
+- RLS-01 through RLS-21 pass using real records and real active identities.
 
 Only after these criteria pass should the Platform Super Admin call public.activate_operational_project_scope(). The switch is one-way through the public endpoint; emergency rollback requires a separately reviewed incident procedure, not a routine user-facing toggle.
