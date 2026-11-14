@@ -1,6 +1,6 @@
 # UDU Tenant / Project Cutover Readiness
 
-**Snapshot:** Supabase project sjwheagxwpnqckmqxyme, updated 2026-11-14 20:04 WIB
+**Snapshot:** Supabase project sjwheagxwpnqckmqxyme, updated 2026-11-14 20:11 WIB
 **Business baseline:** USERS_SSOT.md v3.1  
 **Status:** ONBOARDING + PROJECT REGISTRY + GUARDED OPERATIONAL RLS FOUNDATION APPLIED; TENANT PROVISIONING, BACKFILL, AND RLS ACTIVATION PENDING
 
@@ -135,7 +135,10 @@ Client relationships intentionally do not reference `companies` or Company Membe
 - Added docs/NPWP_KEY_BACKUP_RECOVERY_RUNBOOK.md covering the separate Supabase Vault root key and Proyek Cair application master key, secure escrow, restore paths, rotation constraints, and incident response. This documents the procedure only; no key material was exported or backed up.
 - Installed the gated operational project-scope RLS foundation, parent-scope triggers, Storage guards, audit-scope columns, readiness report, and one-way activation RPC. Enforcement remains OFF because canonical tenant/project IDs and audited backfill do not exist yet.
 - Added SQL guardrail tests in supabase/tests/operational_project_scope_guardrails.sql.
-- Updated CHANGELOG.md with implementation and remaining gates.
+- Updated package.json esbuild devDependency to ^0.28.0 after Vite 8.3.8 dependency resolution exposed a peer mismatch with esbuild 0.25; dependency installation and the production build then passed in an isolated Vercel Sandbox.
+- Production build ran TypeScript noEmit plus Vite production bundling and transformed 1,951 modules. Existing >500 kB chunk-size warning remains. The repository did not contain package-lock.json; install was therefore resolved from package.json, and no lockfile was committed.
+- Latest Vercel production deployment for main commit 0d520cb447e978deb2bf71610a1c136e41fdd8a6 reports READY.
+- Updated CHANGELOG.md with implementation, verification results, and remaining gates.
 - Latest Vercel production deployment for the updated main commit reports READY.
 
 ## 6. Remaining gates (ordered)
