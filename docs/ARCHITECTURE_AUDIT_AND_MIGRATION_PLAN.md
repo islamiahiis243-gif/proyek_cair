@@ -99,6 +99,7 @@ Profil existing sudah tertaut ke Personal Workspace. Belum ada Company row, Comp
 
 Alasan:
 - Satu proyek UDU berada dalam tenant CV Menara Megah; PT IMK adalah client. Client-side item responsibility tidak membuat PT IMK menjadi tenant.
+- Company Workspace CV Menara Megah belum ada pada snapshot audit; provisioning tetap harus dilakukan melalui alur Company onboarding dan Company Super Admin claim.
 - `project_personnel` berisi 13 orang, bukan 13 akun Auth.
 - BOQ 280 items dan audit 1,107 baris merupakan data operasional historis.
 - Tidak ada transaksi stok/kas atau laporan operasional yang perlu dipindahkan pada snapshot saat ini, tetapi relasi dan kepemilikan BOQ/project tetap perlu keputusan eksplisit.
