@@ -6,6 +6,21 @@ The project follows the business and security decisions in [USERS_SSOT.md](docs/
 
 ## [Unreleased] — 2026-11-14
 
+### 2026-11-14 20:24 WIB — Private QR verification and anonymous document closure
+
+- Re-read USERS_SSOT.md v3.1 §12, §18.2, §21.2 and re-audited /verify, AuthGate, the public_document_verification view, database grants/RLS, document/signature tables, and project-evidence Storage.
+- Applied two production migrations:
+  - 20261114132014_make_document_qr_verification_private_and_audited
+  - 20261114132316_revoke_anonymous_document_table_privileges
+- Replaced the outside-AuthGate anonymous QR route with AuthGate-protected PrivateDocumentVerify. The route calls an authenticated SECURITY INVOKER RPC backed by private.verify_private_document_qr.
+- The private QR path requires both active document.qr.scan and document.qr.verify permission codes, and the current server-side project/company membership checks. It returns minimal verification metadata only.
+- QR success/denial attempts append audit_logs events with actor and known document/workspace/project scope; the raw QR token is never stored.
+- Dropped documents_public_verify, revoked anon access to public_document_verification, and revoked all anon table privileges on documents/document_signatures. Project Evidence Storage remains a private bucket with anon deny policy.
+- Verified: anon cannot execute QR RPC, cannot SELECT the public view or documents/signatures, and cannot INSERT/TRUNCATE documents/signatures. Authenticated can execute only the public invoker wrapper; call without auth.uid returns zero rows.
+- **Positive QR verification not yet tested** because there are zero canonical Projects and zero document rows. Active project members need both permissions.
+- The 16-table operational RLS gate remains OFF; no operational or audit rows were changed and no dummy data was created.
+
+
 ### 2026-11-14 20:04 WIB — SSOT v3.1 review and guarded operational Project RLS
 
 - Re-read docs/USERS_SSOT.md v3.1 and checked tenant/project/client boundaries, active Company and Project Membership requirements, explicit permission grants, append-only audit expectations, and private QR/TTE restrictions.
