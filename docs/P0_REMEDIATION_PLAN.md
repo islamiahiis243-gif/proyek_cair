@@ -12,13 +12,13 @@
 
 Prioritas P0 yang harus diselesaikan:
 
-1. **QR/TTE dan dokumen privat:** hentikan akses anonim ke dokumen, metadata sensitif, tanda tangan, dan file privat. Desain lama pada implementation plan yang mengusulkan halaman verifikasi publik tidak boleh mengesampingkan SSOT v3.0. Verifikasi harus permission-bound dan tenant/scope-aware.
+1. **QR/TTE dan dokumen privat:** hentikan akses anonim ke dokumen, metadata sensitif, tanda tangan, dan file privat. Desain lama pada implementation plan yang mengusulkan halaman verifikasi publik tidak boleh mengesampingkan SSOT v3.1. Verifikasi harus permission-bound dan tenant/scope-aware.
 2. **Active Context Resolver (ACR):** jangan memperlakukan pilihan workspace di localStorage sebagai bukti otorisasi. Backend harus menyelesaikan dan memvalidasi identitas, membership, workspace, project scope, permission, serta statusnya pada setiap operasi.
 3. **Tenant/project isolation:** ganti kebijakan RLS permisif dengan kebijakan berdasarkan membership, project scope, dan permission; cegah akses lintas tenant melalui REST, RPC, dan Storage.
 4. **Platform Owner:** kewenangan platform harus bersumber dari registrasi platform-admin yang stabil dan dapat diaudit, bukan semata-mata `profiles.role = 'admin'` atau alamat email.
 5. **SECURITY DEFINER dan offline sync:** audit hak EXECUTE dan validasi konteks di server; setiap item antrean offline harus divalidasi ulang saat sinkronisasi.
 
-SSOT v3.0 adalah sumber kebenaran untuk identity, company/tenant, membership, persona, role, permission, authority, dan project scope. Rencana implementasi lama menjelaskan kebutuhan operasional proyek (BOQ, inventory, progress, cash, safety, dokumen, dan offline cache), tetapi keputusan lama mengenai verifikasi QR publik bertentangan dengan aturan keamanan dokumen privat pada SSOT dan karenanya tidak digunakan.
+SSOT v3.1 adalah sumber kebenaran untuk identity, company/tenant, membership, persona, role, permission, authority, dan project scope. Rencana implementasi lama menjelaskan kebutuhan operasional proyek (BOQ, inventory, progress, cash, safety, dokumen, dan offline cache), tetapi keputusan lama mengenai verifikasi QR publik bertentangan dengan aturan keamanan dokumen privat pada SSOT dan karenanya tidak digunakan.
 
 ## 2. Prinsip arsitektur wajib
 
@@ -95,7 +95,7 @@ Resolver harus membentuk konteks efektif dari data otoritatif, bukan dari state 
 2. Workspace harus dimiliki atau dapat diakses melalui hubungan yang sah.
 3. Company Membership harus aktif untuk konteks perusahaan.
 4. Project Membership/Scope harus aktif untuk project yang diminta.
-5. Persona, role, permission, authority, kondisi, dan resource scope harus sesuai SSOT v3.0.
+5. Persona, role, permission, authority, kondisi, dan resource scope harus sesuai SSOT v3.1.
 6. Status membership, assignment, invitation, dan tenant harus dicek ulang saat request.
 7. Context switch dicatat; perubahan state client tidak otomatis memberi hak.
 8. Jika membership dicabut atau berubah, konteks lama harus gagal pada request berikutnya.
@@ -378,9 +378,9 @@ P0 baru dapat dinyatakan selesai bila seluruh kondisi berikut terpenuhi:
 1. Apakah model Project dan Project Membership yang ada sekarang dapat dipertahankan, atau perlu diselaraskan dengan model SSOT? Jawab berdasarkan inspeksi schema dan data aktual.
 2. Bagaimana bukti ownership untuk setiap row BOQ historis? Jangan mengasumsikan semua 280 row berada pada satu project tanpa verifikasi.
 3. Bagaimana pemetaan historis untuk inventory, cash, progress, safety, media, documents, dan attachments?
-4. Apakah ada keputusan SSOT baru yang secara eksplisit mengubah verifikasi QR privat menjadi publik? Sampai ada perubahan yang disetujui, ikuti SSOT v3.0.
+4. Apakah ada keputusan SSOT baru yang secara eksplisit mengubah verifikasi QR privat menjadi publik? Sampai ada perubahan yang disetujui, ikuti SSOT v3.1.
 5. Siapa approver independen untuk recovery/grant Platform Owner dan bagaimana prosedur break-glass diaudit?
-6. Apa permission catalog final untuk setiap operasi dan resource scope, diselaraskan dengan SSOT v3.0?
+6. Apa permission catalog final untuk setiap operasi dan resource scope, diselaraskan dengan SSOT v3.1?
 
 ## 13. Catatan baseline audit sebelumnya (wajib revalidate)
 
@@ -398,7 +398,7 @@ Temuan tersebut berasal dari audit implementasi terdahulu dan tidak boleh diperl
 ## 14. Hubungan dengan dokumen sumber
 
 - [USERS_SSOT.md](./USERS_SSOT.md) — otoritas keputusan identity, tenant, membership, persona, role, permission, authority, project scope, workflow, dan audit.
-- `implementation_plan.md` yang diberikan sebagai konteks produk — menjelaskan kebutuhan aplikasi kontrol proyek konstruksi (BOQ/logistik, progres/Kurva-S, kas, K3, dokumen QR, Supabase, offline cache, Vercel). Keputusan verifikasi QR publik dalam rencana tersebut tidak berlaku jika bertentangan dengan SSOT v3.0.
+- `implementation_plan.md` yang diberikan sebagai konteks produk — menjelaskan kebutuhan aplikasi kontrol proyek konstruksi (BOQ/logistik, progres/Kurva-S, kas, K3, dokumen QR, Supabase, offline cache, Vercel). Keputusan verifikasi QR publik dalam rencana tersebut tidak berlaku jika bertentangan dengan SSOT v3.1.
 - Audit gap read-only terdahulu — sumber snapshot temuan implementasi yang wajib diverifikasi ulang sebelum migrasi.
 
 ---
