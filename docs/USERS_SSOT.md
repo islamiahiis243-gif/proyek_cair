@@ -802,17 +802,292 @@ Tahapan berikut merupakan arah implementasi, bukan pernyataan bahwa fitur telah 
 - Pertimbangkan paket Professional/Individual Plus dan Company.
 - Jika kelak diperlukan perpindahan data personal ke perusahaan, sediakan mekanisme transfer/copy yang eksplisit, disetujui pemilik, tervalidasi tujuan, dan teraudit. Jangan memindahkan kepemilikan atau menggabungkan data secara otomatis.
 
-## 16. Changelog
 
-### Versi 2.3 — 2026-11-13
-- Menetapkan Model B: signup umum Google/email menyediakan Personal Workspace.
-- Menetapkan Personal Workspace sebagai konteks personal yang berbeda dari Company/Tenant dan Company Workspace.
-- Menegaskan satu User Identity dapat memiliki Personal Workspace dan beberapa Company Membership tanpa akun duplikat.
-- Menetapkan Personal Workspace single-owner pada tahap awal; kolaborasi personal belum termasuk cakupan.
-- Menetapkan pemisahan keamanan, ownership, RLS, dan context switching antara personal dan perusahaan.
-- Menambahkan Personal-to-Company Growth Journey: Personal → Growing → Company Ready → Company Offer → Company Onboarding → Company Activation.
-- Memisahkan Company Offer, Company Registration/Verification, aktivasi RFIN-A, dan undangan RFIN-B.
-- Menetapkan Company Readiness sebagai indikator produk, bukan role, permission, authority, atau bukti legalitas.
-- Menetapkan Company Offer sebagai penawaran sukarela yang tidak memberikan akses atau privilege.
-- Menambahkan tahapan implementasi dan arah paket Personal / Professional / Company; detail komersial tetap belum diputuskan.
+## 16. Workspace Architecture Specification
 
+**Status:** Target architecture / product and authorization specification. Bagian ini mendefinisikan isi Workspace dan kontrak sinkronisasi frontend-backend. Ini bukan klaim bahwa seluruh menu, API, tabel, permission, atau modul telah diimplementasikan.
+
+### 16.1 Prinsip arsitektur Workspace
+
+UDU menggunakan tiga konteks kepemilikan utama: platform, perusahaan (tenant), dan personal. Untuk keperluan UI, konteks tersebut diekspresikan melalui empat pengalaman Workspace:
+
+1. **Platform Super Admin Workspace** — administrasi global platform.
+2. **Company Super Admin Workspace (ProyekCair Console)** — tata kelola satu tenant perusahaan.
+3. **Company Operational Workspace (Persona Workspace)** — pekerjaan operasional dalam tenant berdasarkan persona aktif.
+4. **Personal Workspace (General User Type B / Model B)** — penggunaan mandiri milik satu User Identity.
+
+Company Operational Workspace bukan tenant atau jenis kepemilikan baru. Ini adalah pengalaman operasional dalam Company Workspace. Persona juga bukan Workspace, identitas, jabatan, atau role; persona adalah konteks kapasitas kerja yang dipilih dari penugasan sah pada membership perusahaan.
+
+Prinsip pemisah:
+- Workspace/context menentukan batas kepemilikan dan ruang data yang sedang digunakan.
+- Persona menentukan kapasitas/konteks pekerjaan.
+- Role mengelompokkan permission.
+- Permission menentukan tindakan teknis atomik.
+- Authority menentukan batas kewenangan bisnis.
+- Project Membership/Scope membatasi proyek atau resource yang dapat diakses.
+- Jabatan dan departemen merupakan struktur organisasi; keduanya tidak memberikan permission secara otomatis.
+- Menu yang tampil di frontend bukan bukti otorisasi. Backend/database tetap menjadi sumber keputusan akses.
+
+Rute UI berikut hanya rekomendasi, bukan kontrak URL permanen:
+- \`/platform\` — Platform Super Admin Workspace.
+- \`/console\` — Company Super Admin Console.
+- area aplikasi operasional — Company Operational Workspace sesuai persona.
+- \`/workspace/personal\` — Personal Workspace.
+
+### 16.2 Platform Super Admin Workspace
+
+Platform Super Admin Workspace digunakan untuk administrasi platform lintas tenant sesuai kebijakan platform. Otoritas Platform Super Admin tetap terpisah dari persona operasional tenant; ketika Platform Owner bekerja dalam perusahaan sebagai persona operasional, ia tunduk pada Company Membership, persona, role, permission, authority, dan scope perusahaan tersebut.
+
+| Menu | Konten/tampilan frontend | Tanggung jawab backend (target) |
+|---|---|---|
+| Platform Dashboard | Statistik perusahaan, pengguna, status verifikasi, aktivasi, aktivitas dan alert | Agregasi platform-level yang dibatasi policy |
+| Company Management | Daftar, pencarian, detail, status perusahaan | Company/tenant records dan lifecycle |
+| Company Registration & Verification | Permohonan, dokumen legal, NPWP, keputusan dan alasan | Registration, legal verification, decision history |
+| Company Super Admin Management | Kursi admin, pemegang aktif, histori aktivasi dan pemulihan | Provisioning dan transfer satu kursi Company Super Admin |
+| RFIN-A Management | Penerbitan, status, expiry, revoke, redemption history | RFIN-A engine; simpan hash, bukan plaintext |
+| User Identity Management | Pencarian identitas dan status provider yang diizinkan | Identity lookup yang meminimalkan data pribadi |
+| Persona Catalog | Katalog persona global | Persona definitions/catalog |
+| Role Catalog | Katalog role global | Role definitions/catalog |
+| Permission Catalog | Katalog permission dan deskripsi | Permission catalog |
+| Authority Policy / Platform Guardrails | Template serta batas kebijakan global | Guardrails dan policy global |
+| Platform Audit Trail | Aktivitas administrasi platform | Append-only platform audit |
+| Security Center | Peristiwa keamanan dan percobaan akses ditolak | Security events, rate-limit dan authentication signals |
+| Platform Recovery | Pemulihan/pengalihan kepemilikan melalui prosedur terlindungi | Protected recovery workflow |
+| Platform Settings | Konfigurasi global yang disetujui | Platform configuration |
+
+Dashboard platform dapat merangkum total/verified/pending companies, kursi Company Super Admin aktif, jumlah User Identity dan Company Membership aktif, status RFIN-A, security alerts, dan aktivitas platform terbaru. Statistik hanya ditampilkan jika sumber data dan policy aksesnya tersedia.
+
+**Batas:** Platform Super Admin tidak otomatis memperoleh hak CRUD/approval operasional pada setiap tenant. Akses lintas tenant untuk administrasi platform harus eksplisit, beralasan bila relevan, terbatas, dan diaudit. Jangan menyamarkan tindakan administratif platform sebagai tindakan persona operasional.
+
+### 16.3 Company Super Admin Workspace — ProyekCair Console
+
+Company Super Admin memperoleh Console untuk mengelola dan mengawasi tenantnya sendiri. Setiap perusahaan hanya boleh memiliki satu kursi Company Super Admin aktif. Console bukan tempat menjalankan seluruh pekerjaan operasional dan tidak otomatis memberikan hak transaksi.
+
+| Menu | Konten/tampilan frontend | Tanggung jawab backend (target) |
+|---|---|---|
+| Company Dashboard | Ringkasan profil, pengguna, proyek, antrean, dokumen dan aktivitas | Agregasi tenant-scoped |
+| Company Profile | Identitas, NPWP, informasi legal, alamat, kontak, status dan riwayat | Company profile dan legal verification records |
+| User Management | Anggota, status akun/membership, persona dan histori | Company memberships dan assignment |
+| Invitation / RFIN-B Management | Buat, konfigurasi, tinjau, cabut dan pantau undangan | Invitation/RFIN-B lifecycle dan atomic redemption |
+| Employee Management | Employee Record, employee_number, status, riwayat | Employee records terkait membership |
+| Organizational Structure | Departemen/unit, posisi, atasan, Head Office dan struktur proyek | Departments, positions, effective-dated relations |
+| Persona Management | Penugasan satu atau beberapa persona | Persona assignments dalam tenant |
+| Role & Permission Management | Template/custom role dalam katalog dan guardrail | Role, role-permission, assignments dan policy validation |
+| Authority Management | Limit dan kewenangan bisnis | Authority policies/assignments |
+| Project Management | Daftar dan detail proyek perusahaan | Tenant-owned projects |
+| Project Assignment | Anggota, persona dan tanggung jawab per proyek | Project memberships/scopes |
+| Workflow & Approval | Definisi tahap, urutan, SLA, reminder dan eskalasi | Workflow definitions, instances dan policy validation |
+| Final Signatory Management | Penunjukan pihak TTE/QR, tipe dokumen, scope dan masa berlaku | Signatory assignments dan signing eligibility |
+| Operational Monitoring | Penelusuran aktivitas BOQ, inventory, progress, cash, K3 dan dokumen | Read/audit-oriented tenant-scoped queries |
+| Audit Trail | Histori administrasi dan aktivitas tenant | Append-only tenant audit dan tenant-scoped read |
+| Company Settings | Preferensi dan konfigurasi yang diperbolehkan | Tenant configuration dalam guardrail platform |
+
+Company Dashboard dapat menampilkan status profil, total/active memberships, undangan pending, Employee Records aktif, proyek, pending approvals, ringkasan aktivitas, status dokumen, security/access alerts, dan audit terbaru sesuai hak akses.
+
+#### 16.3.1 Konfigurasi invitation dan preview akses
+
+Sebelum RFIN-B diterbitkan, Company Super Admin mengonfigurasi penerima/binding identitas, tenant tujuan, persona, minimal satu role bila akses operasional memerlukannya, project scope bila relevan, authority bila relevan, expiry, usage limit, dan ketentuan redemption. Sistem menampilkan **Effective Access Preview** yang menjelaskan hak efektif dan batasnya sebelum penerbitan.
+
+Invitation hanya boleh memberikan hak yang berada dalam kewenangan penerbit dan guardrail platform. Invitation tidak dapat membuat Company Super Admin kedua atau Platform Super Admin. Detail aturan RFIN-B tetap tunduk pada bagian onboarding/invitation dan keputusan bisnis yang disahkan.
+
+#### 16.3.2 Pengawasan Console
+
+Company Super Admin dapat memiliki pengawasan/read-oriented terhadap aktivitas tenant sesuai policy. Kemampuan membaca audit atau menelusuri transaksi tidak otomatis memberikan permission untuk membuat, mengubah, menghapus, memeriksa, atau menyetujui transaksi. Bila Company Super Admin juga menjalankan pekerjaan operasional, ia menggunakan persona operasional yang ditugaskan secara eksplisit; jejak audit tetap mencatat identitas asli dan konteks tindakan.
+
+### 16.4 Company Operational Workspace — User Persona
+
+Persona adalah kapasitas/konteks pekerjaan dalam membership perusahaan. Satu User Identity dapat memiliki beberapa persona dalam satu perusahaan dan/atau persona pada beberapa perusahaan. Setiap assignment bersifat eksplisit dan terikat tenant; persona tidak diwariskan antarperusahaan.
+
+Alur pemilihan konteks yang disarankan:
+\`User Identity → Company → Project/Scope (bila relevan) → Active Persona\`.
+
+Kerangka navigasi operasional bersama dapat terdiri atas:
+
+| Menu/area | Konten frontend | Sumber otorisasi backend |
+|---|---|---|
+| My Dashboard | Widget dan ringkasan sesuai persona/scope | Permission, attributes, relationships, authority, scope |
+| My Tasks | Tugas yang ditugaskan kepada pengguna | Task assignment dan resource relationship |
+| My Approvals | Item yang menunggu tindakan pengguna | Active workflow step, permission dan authority |
+| Project Overview | Ringkasan proyek yang ditugaskan | Project membership/scope |
+| Operational Modules | Modul operasional yang diizinkan | Module-specific permission dan tenant isolation |
+| Documents | Dokumen sesuai hak akses | Document permission, classification dan scope |
+| Notifications | Tugas, perubahan status dan pengingat | Recipient authorization dan notification policy |
+| Activity History | Aktivitas sendiri/riwayat yang diizinkan | Audit/activity read policy |
+| My Profile | Identitas dan data kepegawaian yang boleh ditampilkan | User Identity dan Employee Record access |
+| Workspace Context | Perusahaan, proyek, persona aktif | Server-validated active context |
+
+Katalog persona awal yang dicontohkan SSOT/produk mencakup Project Manager, Construction Manager, Site Engineer, Data Inputter, Procurement, Finance, Storekeeper, HSE Officer, Document Controller, dan Viewer. Ini adalah katalog awal/contoh, bukan daftar final atau pemberian hak otomatis.
+
+#### 16.4.1 Template dashboard persona
+
+Dashboard dibangun sebagai komposisi widget berbasis permission dan scope, bukan dashboard terpisah yang mengasumsikan role berdasarkan nama persona. Contoh konten yang dapat diaktifkan sesuai konfigurasi:
+
+| Persona/contoh kapasitas | Kandidat widget |
+|---|---|
+| Project Manager | Project summary, planned vs actual progress, BOQ utilization, inventory summary, cash position (bila diizinkan), issues, pending approvals |
+| Construction Manager | Construction overview, progress, work fronts, constraints, review queue sesuai scope |
+| Site Engineer | Daily/weekly progress, target vs actual, S-curve, site photos, manpower dan kondisi lapangan jika tersedia |
+| Procurement | Requisition/procurement queue, BOQ references, purchasing status dan dokumen procurement |
+| Finance | Cash position, cash-in/out, pending transactions, expense breakdown dan supporting documents |
+| Storekeeper | Goods received/issued, current stock, low-stock alerts, material requests dan movement history |
+| HSE Officer | Toolbox meetings, work permits, hazard/incident reports, safety actions dan HSE documents |
+| Document Controller | Document register, versions, review status, issuance, BATAL/GANTI lifecycle dan distribution sesuai scope |
+| Viewer | Read-only widgets yang secara eksplisit diizinkan; tidak ada hak baca otomatis |
+
+Matriks modul hanyalah template UX. Hak create/read/update/delete/review/approve/sign harus ditetapkan per permission dan diuji pada backend. Nama persona atau jabatan tidak boleh menjadi satu-satunya dasar authorization.
+
+#### 16.4.2 Workflow operasional
+
+Menu My Approvals hanya menampilkan item yang berhubungan dengan aktor dan konteksnya. Tindakan approve/reject/return hanya tersedia dan diterima backend ketika workflow step yang sesuai sedang aktif, aktor memenuhi membership/persona/permission/authority/scope, dan seluruh prasyarat terpenuhi. Tahap approval berjalan serial; notifikasi kepada tahap berikutnya tidak membuka tindakan sebelum gilirannya, kecuali delegasi/pengganti resmi yang tervalidasi.
+
+Final signatory adalah penunjukan terpisah dan bukan konsekuensi otomatis dari persona Project Manager atau jabatan Manager. Pengesahan QR/TTE privat hanya dilakukan oleh pihak yang memenuhi penunjukan, keanggotaan, Employee Record, persona, permission, authority, scope, masa berlaku, dan prasyarat finalisasi dokumen sebagaimana bagian workflow dan TTE/QR SSOT.
+
+### 16.5 Personal Workspace — General User Type B (Model B)
+
+Personal Workspace disediakan setelah signup umum Google/email yang berhasil. Ini adalah workspace single-owner milik satu User Identity, bukan Company/Tenant. Pengguna tidak memerlukan RFIN untuk signup personal dan tidak memperoleh Company Membership, Company Console, persona perusahaan, authority perusahaan, atau final-signatory appointment secara otomatis.
+
+| Menu/area | Konten frontend (rancangan) | Tanggung jawab backend (target) |
+|---|---|---|
+| Personal Dashboard | Ringkasan proyek dan aktivitas pribadi | Personal-owned aggregation |
+| My Projects | Daftar proyek pribadi | Ownership-bound project CRUD |
+| Project Overview | Detail dan status proyek personal | Personal project resources |
+| Project Planning | Rencana dan target bila fitur disediakan | Personal planning resources |
+| Progress Tracking | Catatan progres pribadi bila fitur disediakan | Personal progress resources |
+| Personal Documents | Dokumen milik pengguna | Private personal storage/access |
+| Personal Finance | Catatan biaya pribadi/proyek bila diputuskan sebagai fitur | Personal financial resources; bukan cash tenant |
+| My Activities | Histori aktivitas personal | Personal activity/audit read |
+| Company Readiness | Indikator kesiapan produk jika diaktifkan | Product analytics; bukan authorization input |
+| Company Offer | Penawaran informatif dan sukarela | Offer preferences/status; tidak memberikan privilege |
+| Account Settings | Profil dan preferensi | User Identity/profile settings |
+| Data Management | Export, recovery, deletion/retention sesuai kebijakan | Data lifecycle services dan audit |
+
+Menu seperti Project Planning, Personal Finance, kuota, backup, dan export merupakan kandidat rancangan produk; keberadaannya tidak dianggap sebagai fitur wajib yang sudah disepakati hanya karena dicantumkan di tabel ini. Implementasi memerlukan keputusan fitur, kebijakan retensi/privasi, dan acceptance criteria tersendiri.
+
+Personal Dashboard dapat merangkum My Projects, active projects, progress, recent activities, upcoming tasks, personal documents, kapasitas jika kebijakan kuota ditetapkan, serta Company Readiness/Offer bila fitur tersebut diaktifkan.
+
+Personal Workspace tetap ada ketika User Identity bergabung dengan satu atau beberapa perusahaan. Bergabung dengan perusahaan tidak mengonversi, menghapus, memindahkan, atau menggabungkan data personal. Transfer/copy ke tenant, bila kelak disediakan, harus eksplisit, disetujui pemilik, divalidasi tujuan, dan diaudit. Kolaborasi Personal Workspace belum termasuk cakupan awal.
+
+### 16.6 Perbandingan hak dan batas tiap pengalaman Workspace
+
+| Aspek | Platform Super Admin | Company Super Admin Console | Company Operational / Persona | Personal / General User Type B |
+|---|---|---|---|---|
+| Konteks | Platform | Satu tenant | Tenant dan scope yang ditugaskan | Personal |
+| Pemilik resource | Platform sesuai domain | Company/Tenant | Company/Tenant | Satu User Identity |
+| Company administration | Global sesuai policy | Tenant sendiri | Tidak, kecuali permission delegasi terbatas yang disetujui | Tidak |
+| Provisioning RFIN-A | Ya, sesuai prosedur | Tidak | Tidak | Tidak |
+| Invitation/RFIN-B | Administrasi sesuai policy | Tenant sendiri | Tidak kecuali didelegasikan secara eksplisit | Tidak |
+| Persona catalog | Global | Memilih/menugaskan dalam guardrail | Menggunakan persona yang ditugaskan | Tidak ada persona perusahaan |
+| Role/permission | Katalog dan guardrail global | Menugaskan dalam batas policy | Menggunakan hak efektif | Tidak ada hak perusahaan |
+| Authority | Policy global | Menetapkan dalam guardrail | Menggunakan authority yang ditugaskan | Tidak ada authority perusahaan |
+| Project access | Administrasi sesuai policy; bukan bypass operasional | Tata kelola proyek tenant | Proyek/scope yang ditugaskan | Proyek personal sendiri |
+| Workflow | Guardrail platform | Konfigurasi tenant | Menjalankan step yang ditugaskan | Bukan workflow perusahaan |
+| Audit | Platform audit sesuai policy | Audit tenant sendiri | Sesuai permission | Aktivitas personal sendiri |
+| Final signatory/TTE/QR | Administrasi/policy sesuai batas | Menetapkan pihak dan scope | Hanya jika ditunjuk serta memenuhi seluruh syarat | Tidak |
+| Akses lintas tenant | Hanya sesuai tugas/policy, beralasan dan diaudit | Tidak | Tidak | Tidak |
+
+### 16.7 Kontrak sinkronisasi frontend-backend
+
+Frontend dan backend wajib menggunakan vocabulary permission, konteks, dan status yang konsisten. Frontend bertanggung jawab menyajikan UI yang sesuai hak efektif; backend/database tetap menjadi enforcement authority.
+
+Kontrak konteks konseptual (ilustrasi TypeScript, bukan schema final atau klaim implementasi):
+
+\`\`\`ts
+type WorkspaceType = "PLATFORM" | "COMPANY" | "PERSONAL";
+
+interface ActiveWorkspaceContext {
+  userId: string;
+  workspaceType: WorkspaceType;
+  workspaceId: string;
+
+  companyId?: string;
+  membershipId?: string;
+  employeeId?: string;
+
+  activePersonaId?: string;
+  activeProjectId?: string;
+
+  // Informational effective-access snapshot for UI.
+  // Server must independently resolve and enforce every protected action.
+  permissionCodes: string[];
+
+  contextStatus: "ACTIVE" | "SUSPENDED" | "INVALID";
+}
+\`\`\`
+
+Kontrak ini tidak menjadikan nilai dari browser sebagai bukti otorisasi. \`userId\`, \`workspaceId\`, \`companyId\`, \`membershipId\`, \`personaId\`, \`projectId\`, dan permission snapshot dari client harus diverifikasi/di-resolve oleh backend dari identitas autentikasi dan data server-side. Hindari memasukkan authority atau privilege yang dipercaya langsung dari payload client.
+
+Contoh permission code awal untuk menyelaraskan UI dan API (katalog final harus dikelola terpusat dan direview; nama ini bukan bukti permission sudah dibuat):
+
+| UI action/resource | Contoh permission code | Enforcement tambahan |
+|---|---|---|
+| Read company profile | \`company.profile.read\` | Membership/admin scope tenant |
+| Read/manage membership | \`membership.read\` / \`membership.manage\` | Company Super Admin atau delegated permission sah |
+| Invite member | \`membership.invite\` | Issuer authority, tenant dan RFIN-B policy |
+| Read employee record | \`employee.read\` | Tenant scope dan data classification |
+| Read/assign project | \`project.read\` / \`project.assign\` | Tenant/project relationship |
+| Read BOQ | \`boq.read\` | Company dan project scope |
+| Create progress | \`progress.create\` | Project scope dan kondisi workflow |
+| Read inventory | \`inventory.read\` | Company/project scope |
+| Create inventory movement | \`inventory.mutation.create\` | Status resource dan business rules |
+| Read cash | \`cash.read\` | Company/project scope dan data classification |
+| Create cash transaction | \`cash.transaction.create\` | Authority/business constraints jika relevan |
+| Read K3 report | \`k3.report.read\` | Company/project scope |
+| Issue document | \`document.issue\` | Document lifecycle/workflow policy |
+| Sign document | \`document.sign\` | Final-signatory appointment, active step, authority, final version |
+| Read audit | \`audit.read\` | Platform atau tenant-scoped audit policy |
+
+Frontend dapat menggunakan permission snapshot untuk menyembunyikan/menonaktifkan menu dan kontrol. Setiap API/RPC/mutasi wajib menghitung/validasi ulang akses saat operasi dilakukan. Hasil penolakan backend harus konsisten dan tidak membocorkan resource lintas tenant.
+
+### 16.8 Tanggung jawab per lapisan
+
+| Lapisan | Tanggung jawab |
+|---|---|
+| Frontend | Context selector, navigation, widget, form, tombol, empty/error state dan tampilan berdasarkan effective access |
+| API/RPC | Validasi identitas, context, membership, persona, permission, authority, attribute, relationship dan scope |
+| Authorization Engine | Keputusan hybrid RBAC + ABAC + ReBAC; ACL hanya pengecualian terkontrol bila disetujui |
+| Database/RLS | Tenant/personal ownership isolation pada setiap tabel dan operasi yang terekspos |
+| Workflow Engine | Urutan serial, active-step gating, SLA, reminder, escalation, delegation dan finalization rules |
+| Audit Engine | Append-only event atas perubahan akses, data, workflow, dokumen dan administrasi |
+| Storage | Akses privat yang divalidasi terhadap owner/tenant/resource; tidak ada public exposure yang bertentangan dengan kebijakan TTE/QR privat |
+
+Satu definisi katalog permission dan metadata resource sebaiknya dipakai untuk menu frontend, API/RPC, test matrix, dan dokumentasi. Namun definisi UI tidak menggantikan enforcement database/server.
+
+### 16.9 Acceptance criteria minimum untuk setiap Workspace
+
+Sebelum Workspace dinyatakan siap:
+1. Pengguna hanya dapat masuk ke konteks Workspace yang kepemilikan/membership-nya valid.
+2. Context switch tidak memberi privilege baru dan selalu divalidasi server-side.
+3. Semua menu dan tombol yang sensitif berkorespondensi dengan permission/action yang terdefinisi; backend tetap menolak direct API/RPC yang tidak sah.
+4. Semua query dan mutasi tenant-scoped terisolasi berdasarkan Company ID yang tervalidasi.
+5. Personal resources hanya dapat diakses User Identity pemilik; Personal Workspace tidak menggunakan Company ID fiktif.
+6. Persona, role, permission, authority, attributes, relationships, dan project scope diuji secara terpisah serta gabungan.
+7. Perubahan membership/assignment/policy segera memengaruhi keputusan akses sesuai strategi invalidasi cache.
+8. Workflow approval serial dan active-step gating diuji, termasuk percobaan bertindak di luar giliran.
+9. Final signatory dan QR/TTE privat tidak dapat digunakan tanpa appointment dan seluruh syaratnya.
+10. Audit merekam actor, tenant/context, persona, scope, aksi, objek, hasil, dan reason relevan tanpa menyimpan secret/token.
+11. Pengujian mencakup positive, negative, cross-tenant, cross-project, revoked membership, suspended identity, dan legacy regression.
+12. UI menampilkan konteks perusahaan/proyek/persona aktif secara jelas dan menangani context invalid/expired tanpa melanjutkan mutasi.
+
+### 16.10 Status keputusan dan hal yang belum menjadi kontrak final
+
+Isi menu dan widget di bagian ini adalah target arsitektur. Hal-hal berikut belum boleh diasumsikan final hanya berdasarkan rancangan UI:
+- Nama final seluruh persona, role, dan permission serta kombinasi default-nya.
+- Permission/action matrix terperinci per modul dan per operasi CRUD/review/approve/sign.
+- Widget/dashboard per paket atau lisensi.
+- Fitur personal seperti planning, finance, quota, backup, retention, export, dan recovery beserta kebijakannya.
+- Struktur API/RPC, nama tabel final, payload/error schema, dan strategi cache.
+- Kebijakan delegasi administratif dan pengecualian ACL.
+- Acceptance threshold operasional, SLA default, dan metrik Company Readiness.
+
+Keputusan tersebut harus dituangkan pada katalog permission, frontend-backend contract, database mapping, RLS/authorization matrix, dan test matrix sebelum implementasi.
+
+## 17. Changelog
+
+### Versi 2.4 — 2026-11-14
+- Menambahkan Workspace Architecture Specification untuk empat pengalaman: Platform Super Admin, Company Super Admin Console, Company Operational/Persona, dan Personal Workspace (General User Type B).
+- Menegaskan bahwa Persona Workspace adalah pengalaman operasional dalam Company/Tenant, bukan tenant atau jenis kepemilikan terpisah.
+- Merinci target menu, konten frontend, tanggung jawab backend, dashboard, invitation configuration, monitoring, dan workflow per konteks.
+- Menambahkan prinsip satu kerangka aplikasi operasional yang menampilkan menu/widget berdasarkan effective access; permission tetap ditegakkan backend/database.
+- Menambahkan contoh Active Workspace Context, permission mapping, tanggung jawab lapisan, dan acceptance criteria minimum sinkronisasi frontend-backend.
+- Memisahkan rancangan fitur personal yang telah ditetapkan SSOT dari kandidat fitur produk yang masih memerlukan keputusan.
+- Menegaskan bahwa seluruh menu, tabel, permission, endpoint, dan widget di bagian baru merupakan target specification, bukan bukti implementasi.
