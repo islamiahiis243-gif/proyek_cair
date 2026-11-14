@@ -3,7 +3,7 @@
 - **Project:** UDU / Proyek Cair
 - **Tanggal snapshot:** 2026-11-14
 - **Status:** Discovery & mapping specification — *belum disetujui untuk migration SQL*
-- **Baseline otoritatif:** [USERS_SSOT.md v3.0](./USERS_SSOT.md)
+- **Baseline otoritatif:** [USERS_SSOT.md v3.1](./USERS_SSOT.md)
 - **Rencana remediasi:** [P0_REMEDIATION_PLAN.md](./P0_REMEDIATION_PLAN.md)
 - **Audit arsitektur sebelumnya:** [ARCHITECTURE_AUDIT_AND_MIGRATION_PLAN.md](./ARCHITECTURE_AUDIT_AND_MIGRATION_PLAN.md)
 - **Tujuan:** Memetakan setiap tabel legacy ke workspace, project, dan permission serta mengidentifikasi schema gap sebelum migration SQL multi-tenant pertama ditulis.
@@ -12,22 +12,23 @@
 
 ## 1. Executive decision
 
-**Kesimpulan utama: data operasional legacy saat ini dapat diidentifikasi sebagai satu legacy project bernama “Proyek Cair”, tetapi workspace/tenant pemiliknya belum dapat ditentukan secara sah.**
+**Keputusan bisnis: Proyek Cair adalah nama platform; UDU adalah proyek operasional di dalam Company Workspace tenant CV Menara Megah; PT IMK adalah client, bukan tenant.** Target business ownership data proyek UDU adalah Company Workspace milik CV Menara Megah. Snapshot database 2026-11-14 belum memiliki Company/Company Workspace/Membership dan tabel project registry, sehingga keputusan bisnis ini belum berarti record tersebut sudah ada atau boleh langsung di-backfill tanpa mapping ledger.
 
 Bukti yang tersedia:
-- `public.project_control` memiliki satu row dengan nama `Proyek Cair`.
+- `public.project_control` memiliki satu row dengan label lama `Proyek Cair`. Berdasarkan konfirmasi terbaru, ini adalah label platform/legacy, bukan nama project; proyek operasional yang dimaksud adalah **UDU**. Jangan menganggap nilai lama tersebut sebagai canonical project name/ID.
 - BOQ berisi 280 item dan 39 section; audit trail berisi 1.107 row.
 - Semua 1.106 audit event bertipe `boq_items`; satu event bertipe `profile`.
-- Roster `project_personnel` berisi 13 orang: 8 berlabel CV Menara Megah dan 5 berlabel PT IMK.
-- Catatan implementasi menyatakan PT IMK adalah client/pemberi item tertentu dan CV Menara Megah adalah kontraktor pelaksana. Dokumen fase workspace menyatakan CV Menara Megah tidak otomatis menjadi Company Workspace atau Company Super Admin tenant; proyek legacy tetap pada legacy scope sampai kepemilikan workspace/project disepakati.
-- Database memiliki 3 Personal Workspace, tetapi tidak ada Company dan Company Membership aktif pada snapshot. Personal Workspace yang sudah ada **tidak** membuktikan bahwa salah satunya pemilik Proyek Cair.
+- Roster `project_personnel` berisi 13 orang: 8 berlabel CV Menara Megah dan 5 berlabel PT IMK. Label IMK adalah relasi client/komersial atau roster proyek, bukan tenant.
+- Konfirmasi terbaru menetapkan CV Menara Megah sebagai tenant pemilik Company Workspace proyek UDU; PT IMK adalah client dan bukan tenant.
+- Snapshot memiliki 3 Personal Workspace, tetapi tidak ada Company, Company Workspace, atau Company Membership. Company Workspace Menara Megah belum terbukti diprovisioning di database.
 - Tidak ada tabel `projects` pada inventory schema publik yang diperiksa. `personal_projects` adalah daftar project milik Personal Workspace dan bukan bukti bahwa proyek legacy sudah menjadi Personal Project.
 
 Karena itu:
-1. Gunakan **Legacy Project Candidate: Proyek Cair** sebagai klasifikasi sementara untuk mengelompokkan record historis yang memang berasal dari proyek tersebut.
-2. Tetapkan **Workspace Owner = UNRESOLVED / LEGACY_UNASSIGNED** sampai keputusan tertulis dan bukti ownership disetujui. Label ini adalah status dokumentasi/quarantine, **bukan** UUID workspace dan bukan nilai kolom yang boleh diisi ke database.
-3. Jangan assign proyek ke Personal Workspace mana pun, CV Menara Megah, atau PT IMK hanya berdasarkan roster, label perusahaan, data BOQ, `owner_type`, atau relasi komersial.
-4. Jangan menulis migration SQL pertama yang melakukan backfill atau enforce `NOT NULL` sampai seluruh gerbang pada bagian 10 lulus.
+1. Gunakan **Platform = Proyek Cair**, **Tenant/Company = CV Menara Megah**, **Company Workspace = workspace milik CV Menara Megah**, **Project = UDU**, dan **Client = PT IMK** sebagai pemetaan bisnis otoritatif.
+2. Workspace owner tidak lagi unresolved secara bisnis. Namun pada snapshot, Company/Workspace/Membership belum ada; jangan mengarang UUID atau mengisi `workspace_id` sebelum provisioning Company Workspace yang sah.
+3. Jangan membuat tenant/Company Workspace untuk PT IMK atau Company Membership PT IMK hanya karena roster/label IMK atau item BOQ tanggungan client.
+4. `owner_type`, label IMK/Kontraktor, dan tanggungan/pasokan item adalah atribut komersial/material; bukan tenant selector atau permission grant.
+5. Jangan menulis migration SQL pertama yang melakukan backfill atau enforce `NOT NULL` sampai Company Workspace Menara Megah diprovisioning, canonical Project UDU dan mapping ledger disetujui, serta gerbang pada bagian 10 lulus.
 
 ## 2. Sumber dan tingkat keyakinan
 
@@ -51,31 +52,35 @@ Audit architecture 2026-11-13 mencatat 32 `boq_sections`, sedangkan live count 2
 Target workspace mengikuti SSOT:
 - **PERSONAL:** hanya untuk data personal milik satu identity; tidak otomatis menjadi owner data operasional legacy.
 - **COMPANY:** tenant perusahaan yang sudah melewati approval/provisioning dan memiliki membership aktif.
-- **LEGACY_UNASSIGNED:** status penahanan dokumenter untuk row legacy yang project-nya dapat dikenali tetapi workspace owner belum disepakati. Bukan tipe workspace baru dan bukan workspace yang bisa dipilih user.
+- **AWAITING_PROVISIONING:** status dokumenter untuk row legacy yang target tenant/project bisnisnya telah diputuskan tetapi Company Workspace ID dan/atau canonical Project ID belum tersedia. Bukan tipe workspace baru dan bukan nilai yang boleh diisi ke database.
 
 ### 3.2 Project target
 
 | Atribut | Nilai mapping sementara | Status |
 |---|---|---|
-| Legacy project label | Proyek Cair / Pembangunan Kantor UDU | Supported |
+| Platform name | Proyek Cair | Confirmed business decision |
+| Canonical operational project name | UDU | Confirmed business decision; canonical project UUID/table still pending |
+| Tenant / Company | CV Menara Megah | Confirmed business decision; Company/Workspace provisioning not present in snapshot |
+| Company Workspace owner | CV Menara Megah | Confirmed business decision; target DB UUID pending provisioning |
+| Client | PT IMK | Confirmed business decision; not a tenant |
 | Source anchor | Satu row `public.project_control` | Supported as source anchor only |
 | Project registry table / canonical project UUID | Belum ditemukan pada schema inventory publik | UNRESOLVED |
-| Workspace owner | Belum terbukti | UNRESOLVED |
-| Client / pemberi kerja | PT IMK | Didukung dokumen proyek; bukan tenant-owner decision |
-| Contractor / pelaksana | CV Menara Megah | Didukung dokumen proyek; bukan tenant-owner decision |
+| Workspace owner | CV Menara Megah (business decision) | Confirmed; DB workspace ID pending provisioning |
+| Client / pemberi kerja | PT IMK | Confirmed; client relationship only, not tenant |
+| Tenant / contractor | CV Menara Megah | Confirmed tenant and Company Workspace owner for UDU |
 | Site | Muro / Murung Cahu, Kalimantan Tengah | Project context |
 | Project membership roster | 13 `project_personnel` records | Roster only; bukan auth membership |
 | Authenticated project membership | Belum ada model Project Membership pada schema inventory | Schema gap |
 
 **Jangan menggunakan `project_control.id` langsung sebagai canonical `project_id` tanpa keputusan arsitektur.** Tabel tersebut saat ini berisi konfigurasi proyek tunggal, bukan project registry yang memiliki tenant FK, lifecycle, membership, atau scope. ID row-nya dapat dipakai sebagai source anchor saat membuat mapping ledger sementara, tetapi tidak otomatis menjadi project master ID.
 
-### 3.3 Bukti yang tidak cukup untuk memilih tenant
+### 3.3 Pemisahan tenant, project, client, dan commercial responsibility
 
 - Nama perusahaan pada `project_personnel.company` hanya atribut roster.
 - `project_personnel.linked_user_id` (jika terisi) harus diverifikasi terhadap Auth identity; bukan otomatis Company Membership.
-- `inventory_transactions.owner_type` (KONTRAKTOR/IMK) menunjukkan klasifikasi kepemilikan/pasokan barang, bukan tenant owner.
+- `inventory_transactions.owner_type` (KONTRAKTOR/IMK), label item IMK, atau catatan item tanggungan client menunjukkan tanggung jawab/pasokan komersial, bukan tenant owner.
 - Label `company_name`, `signer_role`, `signer_email`, `company`, `created_by`, atau `updated_by` tidak menetapkan workspace.
-- Data BOQ yang bersumber dari satu workbook/proyek tidak menentukan apakah workspace owner adalah client atau contractor.
+- Data BOQ dapat memuat item tanggungan client, tetapi hal itu tidak mengubah tenant owner: CV Menara Megah tetap pemilik Company Workspace proyek UDU; PT IMK tetap client.
 - Jumlah Personal Workspace dan akun Auth tidak menentukan ownership proyek.
 
 ## 4. Live schema inventory and legacy row baseline
@@ -84,7 +89,7 @@ Target workspace mengikuti SSOT:
 
 | Tabel | Row count 2026-11-14 | Workspace/project columns | Existing relationship / note |
 |---|---:|---|---|
-| `project_control` | 1 | Tidak ada | Satu row “Proyek Cair”; calon source anchor |
+| `project_control` | 1 | Tidak ada | Satu row dengan label lama “Proyek Cair”; source anchor untuk project UDU, bukan project master |
 | `boq_sections` | 39 | Tidak ada | Hierarki self-reference `parent_id`; sumber workbook |
 | `boq_items` | 280 | Tidak ada | FK ke `boq_sections`; audit events merujuk ke tabel ini |
 | `boq_additions` | 0 | Tidak ada | FK `item_id → boq_items` |
@@ -134,9 +139,9 @@ Status:
 
 | Tabel | Workspace target | Project target | Permission baseline SSOT | Schema gap / mapping rule | Status |
 |---|---|---|---|---|---|
-| `project_control` | UNRESOLVED / LEGACY_UNASSIGNED | Legacy Project Candidate: Proyek Cair | `project.read`, `project.update`, `project.close` | Tidak ada workspace/project master FK. Putuskan apakah tabel ini tetap project settings atau dinormalisasi ke project registry; jangan menambah FK sebelum model final | PROJECT-CANDIDATE |
-| `boq_sections` | UNRESOLVED / LEGACY_UNASSIGNED | Proyek Cair melalui satu legacy BOQ set | `boq.read`, `boq.create`, `boq.update`, `boq.approve`, `boq.revision` | Tambahkan scope pada BOQ root/project, atau relasi eksplisit ke project; parent-child section harus satu project | PROJECT-CANDIDATE |
-| `boq_items` | UNRESOLVED / LEGACY_UNASSIGNED | Proyek Cair; 280 row | `boq.read`, `boq.create`, `boq.update`, `boq.approve`, `boq.addition.create`, `boq.revision` | Tidak ada scope column. Validasi `parent_section_id` dalam project yang sama; jangan menyimpulkan tenant dari category, source_sheet, atau owner | PROJECT-CANDIDATE |
+| `project_control` | UNRESOLVED / LEGACY_UNASSIGNED | Project UDU (business identity confirmed; canonical UUID pending) | `project.read`, `project.update`, `project.close` | Tidak ada workspace/project master FK. Putuskan apakah tabel ini tetap project settings atau dinormalisasi ke project registry; jangan menambah FK sebelum model final | PROJECT-CANDIDATE |
+| `boq_sections` | UNRESOLVED / LEGACY_UNASSIGNED | UDU melalui satu legacy BOQ set | `boq.read`, `boq.create`, `boq.update`, `boq.approve`, `boq.revision` | Tambahkan scope pada BOQ root/project, atau relasi eksplisit ke project; parent-child section harus satu project | PROJECT-CANDIDATE |
+| `boq_items` | UNRESOLVED / LEGACY_UNASSIGNED | UDU; 280 row | `boq.read`, `boq.create`, `boq.update`, `boq.approve`, `boq.addition.create`, `boq.revision` | Tidak ada scope column. Validasi `parent_section_id` dalam project yang sama; jangan menyimpulkan tenant dari category, source_sheet, atau owner | PROJECT-CANDIDATE |
 | `boq_additions` | Inherit dari BOQ item | Inherit dari `item_id → boq_items` | `boq.addition.create`, `boq.read`, `boq.approve` | Composite tenant/project consistency terhadap BOQ item; saat ini 0 row | INHERIT-PARENT |
 | `item_schedules` | Inherit dari BOQ item | Inherit dari `item_id → boq_items` | `procurement.read`, `procurement.update`; permission schedule-specific perlu diputuskan bila diperlukan | Tidak ada scope sendiri; pastikan schedule hanya dapat mengubah item pada project yang sama; saat ini 0 row | INHERIT-PARENT |
 
@@ -144,7 +149,7 @@ Status:
 
 | Tabel | Workspace target | Project target | Permission baseline SSOT | Schema gap / mapping rule | Status |
 |---|---|---|---|---|---|
-| `inventory_locations` | UNRESOLVED / LEGACY_UNASSIGNED | Proyek Cair (project-level) | `inventory.read`, `inventory.count`, `inventory.movement.create` | Perlu scope langsung karena tidak memiliki project parent; unique `name` global saat ini mungkin harus menjadi unique per project/workspace | PROJECT-LEVEL / EMPTY-FUTURE |
+| `inventory_locations` | UNRESOLVED / LEGACY_UNASSIGNED | UDU (project-level) | `inventory.read`, `inventory.count`, `inventory.movement.create` | Perlu scope langsung karena tidak memiliki project parent; unique `name` global saat ini mungkin harus menjadi unique per project/workspace | PROJECT-LEVEL / EMPTY-FUTURE |
 | `inventory_transactions` | Inherit from BOQ item and location; both must agree | Inherit from `item_id`; source/destination locations must resolve to same project | `inventory.read`, `inventory.movement.create`, `inventory.movement.review`, `inventory.movement.approve`, `inventory.movement.reverse` | Tidak ada scope. Enforce parent scope consistency untuk item, source/destination location, addition, dan reversal; jangan percaya `owner_type` sebagai tenant | INHERIT-PARENT / EMPTY-FUTURE |
 | `inventory_transaction_reversals` | Inherit from original transaction | Inherit from original/reversal transaction; both must match | `inventory.movement.reverse`, `inventory.read` | Kedua FK transaksi harus satu project/workspace; append-only/reversal semantics dipertahankan | INHERIT-PARENT / EMPTY-FUTURE |
 | `cash_transactions` | UNRESOLVED / LEGACY_UNASSIGNED | Proyek Cair (project-level) | `cash.read`, `cash.transaction.create`, `cash.transaction.submit`, `cash.transaction.review`, `cash.transaction.approve`, `cash.transaction.void`, `cash.transaction.reverse`, `cash.export` | Tidak ada project FK atau scope; setiap row baru harus terikat ke project. Actor `created_by` tidak menentukan tenant | PROJECT-LEVEL / EMPTY-FUTURE |
@@ -156,8 +161,8 @@ Status:
 
 | Tabel | Workspace target | Project target | Permission baseline SSOT | Schema gap / mapping rule | Status |
 |---|---|---|---|---|---|
-| `project_personnel` | UNRESOLVED / LEGACY_UNASSIGNED | Proyek Cair roster | `project.read`, `project.assign`; `employee.read/create/update/manage` hanya jika Employee Record dipakai | 13 row adalah roster operasional, bukan User Identity, Company Membership, Persona, Role, atau Project Membership. `linked_user_id` harus diverifikasi satu per satu; jangan membuat Auth user otomatis | PROJECT-CANDIDATE |
-| `documents` | UNRESOLVED / LEGACY_UNASSIGNED | Proyek Cair (document scope) | `document.read/create/update/submit/review/approve/issue/sign/void/replace`, `document.qr.scan`, `document.qr.verify` | Tidak ada tenant/project FK. Scope harus mengikuti project/resource yang dokumen wakili; QR/TTE privat sesuai SSOT v3.0 | PROJECT-LEVEL / EMPTY-FUTURE |
+| `project_personnel` | UNRESOLVED / LEGACY_UNASSIGNED | UDU roster | `project.read`, `project.assign`; `employee.read/create/update/manage` hanya jika Employee Record dipakai | 13 row adalah roster operasional, bukan User Identity, Company Membership, Persona, Role, atau Project Membership. `linked_user_id` harus diverifikasi satu per satu; jangan membuat Auth user otomatis | PROJECT-CANDIDATE |
+| `documents` | UNRESOLVED / LEGACY_UNASSIGNED | UDU (document scope) | `document.read/create/update/submit/review/approve/issue/sign/void/replace`, `document.qr.scan`, `document.qr.verify` | Tidak ada tenant/project FK. Scope harus mengikuti project/resource yang dokumen wakili; QR/TTE privat sesuai SSOT v3.0 | PROJECT-LEVEL / EMPTY-FUTURE |
 | `document_signatures` | Inherit from document | Inherit from `document_id → documents` | `document.read`, `document.sign`, `document.approve` sesuai workflow | Signer identity/authority/appointment harus divalidasi terpisah; signature scope selalu sama dengan parent document | INHERIT-PARENT / EMPTY-FUTURE |
 | `transaction_attachments` | Inherit from referenced transaction | Inherit from parent transaction resolved by `transaction_kind + transaction_id` | Permission parent resource + `document.read`/download scope yang sesuai | Polymorphic FK saat ini tidak menjaga referential integrity atau tenant consistency; buat allowlist transaction_kind dan resolver parent yang memvalidasi scope | INHERIT-PARENT / EMPTY-FUTURE |
 | `audit_logs` | Inherit from target resource for tenant event; platform/identity event remains separate | Inherit from target project when entity is project-scoped | `audit.read`, `audit.export` | 1,106 `boq_items` events harus resolve melalui `entity_id → boq_items.id`; 1 `profile` event tidak boleh dipaksa ke project. Orphan/unknown entity harus quarantine/review. Audit append-only | MIXED / PARTIAL RESOLUTION |
@@ -244,8 +249,8 @@ Jangan mengubah constraint sebelum business rule final:
 | Dataset | Count | Classification | Backfill rule |
 |---|---:|---|---|
 | `project_control` | 1 | Legacy project anchor candidate | Gunakan sebagai evidence/reference; jangan otomatis menjadi project master |
-| `boq_sections` | 39 | Legacy Proyek Cair BOQ hierarchy | Candidate project Proyek Cair; workspace tetap unresolved |
-| `boq_items` | 280 | Legacy Proyek Cair BOQ rows | Candidate project Proyek Cair; workspace tetap unresolved |
+| `boq_sections` | 39 | Legacy UDU BOQ hierarchy | Project UDU confirmed; target workspace CV Menara Megah awaiting provisioning |
+| `boq_items` | 280 | Legacy UDU BOQ rows | Project UDU confirmed; target workspace CV Menara Megah awaiting provisioning |
 | `audit_logs` entity `boq_items` | 1,106 | BOQ target-linked events | Resolve entity_id ke BOQ item lalu inherit project candidate; preserve actor/action/details/timestamp |
 | `audit_logs` entity `profile` | 1 | Identity/profile event | Identity-level; jangan paksa masuk project |
 | `project_personnel` | 13 | Legacy project roster | Project candidate only; no Auth/Company Membership auto-create |
@@ -305,11 +310,11 @@ Migration SQL pertama yang menyentuh operational legacy data **BLOCKED** sampai 
 
 | ID | Keputusan/evidence | Owner yang perlu menyetujui | Kondisi lulus |
 |---|---|---|---|
-| D-01 | Tentukan workspace/tenant owner Proyek Cair: Personal Workspace tertentu, Company Workspace baru, atau transitional holding design yang disetujui | Project business owner + Platform/Architecture | Keputusan tertulis; bukan inferensi dari roster |
-| D-02 | Tentukan canonical Project registry dan apakah `project_control` menjadi project master atau settings child | Architecture/Data owner | ERD final, lifecycle, FK dan multi-project behavior disepakati |
+| D-01 | Provisioning Company/Tenant dan Company Workspace untuk CV Menara Megah; jangan membuat tenant PT IMK | Platform Super Admin + Company applicant | Business owner confirmed; target tenant/workspace IDs tercatat setelah provisioning resmi |
+| D-02 | Tetapkan canonical Project Registry untuk project UDU; putuskan apakah `project_control` menjadi settings child atau project master | Architecture/Data owner | Nama bisnis UDU confirmed; ERD, canonical UUID, lifecycle, FK dan multi-project behavior disepakati |
 | D-03 | Tetapkan Project Membership/Scope schema dan lifecycle | Product/Architecture/Security | User hanya dapat mengakses project setelah assignment aktif |
 | D-04 | Verifikasi 13 roster entries terhadap Auth identities; putuskan siapa yang benar-benar memerlukan akun/membership | Business owner + Company Admin | Mapping person ↔ auth identity disetujui; no auto-provision |
-| D-05 | Putuskan domain ownership vs supply responsibility pada BOQ/material (IMK-supplied vs contractor-supplied) | Commercial/Project owner | Attribute terpisah dari tenant ownership |
+| D-05 | Pertahankan domain ownership/supply responsibility pada BOQ/material (item tanggungan IMK vs Menara Megah) sebagai atribut komersial terpisah | Commercial/Project owner | Attribute tidak dipakai sebagai tenant selector atau permission grant |
 | D-06 | Finalisasi permission catalog untuk schedule, roster, locations, media, attachments, profile | Product/Security | Permission names masuk SSOT/catalog sebelum policy SQL |
 | D-07 | Tetapkan unique constraints per project/workspace untuk BOQ code, document number, inventory location, node code | Data owner | Business uniqueness rule terdokumentasi |
 | D-08 | Tetapkan mapping untuk audit event orphan/unknown dan retention | Security/Data owner | 1,107 event direkonsiliasi; semua event resolved/quarantined |
@@ -346,10 +351,10 @@ Sebelum menulis SQL migration:
 
 | ID | Test | Expected |
 |---|---|---|
-| MAP-01 | Semua 280 BOQ items resolve ke satu legacy project candidate | Pass; project label consistent |
-| MAP-02 | Workspace owner belum disetujui | Backfill workspace ditahan; tidak menebak |
-| MAP-03 | Attempt map Proyek Cair ke sembarang Personal Workspace | Fail/blocked |
-| MAP-04 | PT IMK/CV Menara Megah roster label dipakai sebagai tenant selector | Fail/blocked |
+| MAP-01 | Semua 280 BOQ items resolve ke satu legacy project candidate | Pass; project UDU consistent |
+| MAP-02 | Tenant owner CV Menara Megah telah diputuskan tetapi Company Workspace/ID belum diprovisioning | Backfill ditahan sampai provisioning resmi dan target ID tersedia |
+| MAP-03 | Attempt map UDU ke sembarang Personal Workspace | Fail/blocked |
+| MAP-04 | PT IMK atau label tanggungan item dipakai sebagai tenant selector | Fail/blocked; CV Menara Megah tenant ditetapkan hanya melalui Company provisioning resmi |
 | MAP-05 | 13 `project_personnel` rows dipakai untuk membuat memberships otomatis | Fail/blocked |
 | MAP-06 | 1,106 audit BOQ events resolve ke existing BOQ item | Pass only if entity_id valid; otherwise quarantine |
 | MAP-07 | 1 profile audit event dipaksa masuk project scope | Fail; tetap identity-level |
@@ -379,6 +384,6 @@ All counts must be refreshed before implementation. The snapshot is descriptive,
 
 ## 14. Final recommendation
 
-**Do not write the first tenant/project backfill migration yet.** The database can identify a single legacy project candidate, but it cannot establish the correct workspace owner or canonical project registry. The safest next action is to obtain the D-01/D-02 business and architecture decisions, then create and review a row-level mapping ledger in staging. Preserve all BOQ and audit history; quarantine uncertainty rather than manufacturing ownership.
+**Do not write the first tenant/project backfill migration yet.** Business ownership is confirmed: CV Menara Megah is the tenant/Company Workspace owner, UDU is its operational project, and PT IMK is the client (not a tenant). Remaining blockers are technical provisioning/IDs, canonical Project Registry design, row-level mapping ledger, parent-scope integrity, and migration tests. Preserve all BOQ and audit history; quarantine unresolved technical mappings rather than manufacturing IDs or memberships.
 
 This specification is the pre-migration gate for [P0_REMEDIATION_PLAN.md](./P0_REMEDIATION_PLAN.md). It is not executable SQL and is not production-change authorization.
