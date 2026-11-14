@@ -1,8 +1,8 @@
 # UDU Tenant / Project Cutover Readiness
 
-**Snapshot:** Supabase project sjwheagxwpnqckmqxyme, updated 2026-11-14 19:22 WIB
+**Snapshot:** Supabase project sjwheagxwpnqckmqxyme, updated 2026-11-14 20:04 WIB
 **Business baseline:** USERS_SSOT.md v3.1  
-**Status:** ONBOARDING + PROJECT REGISTRY FOUNDATION APPLIED DIRECTLY; TENANT PROVISIONING AND LEGACY CUTOVER PENDING
+**Status:** ONBOARDING + PROJECT REGISTRY + GUARDED OPERATIONAL RLS FOUNDATION APPLIED; TENANT PROVISIONING, BACKFILL, AND RLS ACTIVATION PENDING
 
 ## 1. Confirmed business model
 
@@ -58,6 +58,9 @@ The following production migrations were applied directly; no Supabase staging b
 - `20261114120901_complete_npwp_constraints_and_project_client_writes`
 - `20261114121050_add_project_permission_catalog`
 - `20261114121141_enforce_explicit_project_permissions`
+- `20261114125949_add_guarded_operational_project_rls`
+- `20261114130212_lock_down_scope_control_table_rls`
+- `20261114130400_separate_roster_management_permission`
 
 Implemented:
 - Registration RPC requires NPWP and a separately designated Company Super Admin email.
@@ -91,7 +94,34 @@ RLS is enabled on all four registry tables and the permission catalog. Guarded R
 
 Nullable paired `workspace_id` and `project_id` columns, indexes, and integrity constraints were added to 16 operational tables: `project_control`, BOQ sections/items/additions, schedules, inventory, cash, progress, safety, media, documents/signatures, attachments, and project personnel.
 
-**Important:** legacy rows were not backfilled. The existing operational-table RLS policies have not yet been converted to enforce the new project scope. Therefore cross-tenant isolation for legacy operational data is not yet complete, and the nullable scope columns alone must not be treated as an access-control boundary.
+### Guarded operational RLS foundation — installed, enforcement OFF
+
+Three additional production migrations were applied:
+
+- `20261114125949_add_guarded_operational_project_rls`
+- `20261114130212_lock_down_scope_control_table_rls`
+- `20261114130400_separate_roster_management_permission`
+
+Implemented:
+- An inaccessible `private.operational_project_scope_control` singleton and Platform Super Admin-only, one-way `public.activate_operational_project_scope()` cutover RPC. Enforcement defaults to OFF; no application user can toggle the private control table.
+- Eighty restrictive policies across the 16 operational tables: authenticated SELECT/INSERT/UPDATE/DELETE scope guards plus explicit anonymous deny policies. Existing permissive policies remain in place underneath the restrictive layer.
+- When the gate is OFF, the restrictive guard is a compatibility pass-through, preserving the legacy workflow. When ON, every query/write must satisfy an explicit active project membership permission; null project scope is denied.
+- Parent-scope derivation and mismatch checks for BOQ items/additions, schedules, inventory movements/reversals, media, document signatures, and transaction attachments. A child row cannot point to a parent in a different project.
+- Added two module permissions for media upload and inventory-location management, and a distinct `personnel.roster.manage` permission. Roster management does not create Auth identities or Company/Project Memberships.
+- Added paired nullable `workspace_id` / `project_id` columns, FK/check constraints, and an index to `audit_logs`; existing audit events remain unscoped pending audited backfill.
+- Added restrictive Storage policies for `project-evidence`; after activation, evidence paths must start with the canonical Project UUID.
+- Added a non-mutating readiness report and an activation guard that refuses cutover while operational/audit rows are unscoped, project evidence paths are not Project-prefixed, project.read grants are missing, or legacy SECURITY DEFINER mutation RPCs remain executable by authenticated users.
+- Project-signature INSERT is deliberately denied once the gate is enabled until an SSOT-compliant signatory appointment and authority check exists. Read-only access is still project-scoped.
+
+Verification on live Supabase:
+- All 16 operational tables have RLS enabled and their new restrictive policies installed (80 policies total).
+- The compatibility test with the gate OFF returned the existing 280 BOQ items, 39 sections, 1 project-control row, and 13 roster rows to the authenticated role.
+- A rollback-only transaction temporarily enabled the gate and confirmed that the unscoped rows in those four tables became invisible (0 visible rows); the transaction was rolled back and production gate remains OFF.
+- The live readiness report currently finds 280 unscoped BOQ items, 39 unscoped sections, 1 unscoped project_control row, 13 unscoped personnel rows, and 1,107 unscoped audit events. The 12 other operational tables are empty.
+- Five legacy SECURITY DEFINER mutation RPCs are still executable by authenticated users. They must be replaced with project-aware implementations or revoked only after their callers are migrated.
+- No operational row, audit event, user, Company, Workspace, or Project was created, rewritten, or reassigned. No dummy data was used.
+
+**Important:** the project-scope policies are installed but NOT ACTIVE. They do not yet provide cross-tenant isolation while the gate is OFF. Do not enable the gate until canonical Company/Project IDs exist, every row and audit event is backfilled, front-end requests carry active project context, evidence paths are Project-prefixed, legacy SECURITY DEFINER mutation RPCs are fixed, and positive/negative cross-project tests pass.
 
 Client relationships intentionally do not reference `companies` or Company Membership. PT IMK will be recorded as a project client only, not as a tenant.
 
@@ -100,24 +130,27 @@ Client relationships intentionally do not reference `companies` or Company Membe
 - Re-read the uploaded implementation plan and retained the clarified ownership model: Proyek Cair is the platform, UDU is the project, CV Menara Megah is the tenant, and PT IMK is the client.
 - Re-inspected the live schema, onboarding functions, RLS, and data counts.
 - Created the 1,440-row legacy mapping ledger.
-- Applied and verified eight production database migrations without creating a staging branch.
+- Applied and verified eleven production database migrations without creating a staging branch (eight onboarding/project-registry migrations plus three guarded project-scope/RLS migrations).
 - Updated Workspace Center to collect NPWP and the designated claimant email, display masked NPWP in the review queue, use the new application lifecycle, and issue RFIN-A only to the reserved seat email.
 - Added docs/NPWP_KEY_BACKUP_RECOVERY_RUNBOOK.md covering the separate Supabase Vault root key and Proyek Cair application master key, secure escrow, restore paths, rotation constraints, and incident response. This documents the procedure only; no key material was exported or backed up.
+- Installed the gated operational project-scope RLS foundation, parent-scope triggers, Storage guards, audit-scope columns, readiness report, and one-way activation RPC. Enforcement remains OFF because canonical tenant/project IDs and audited backfill do not exist yet.
+- Added SQL guardrail tests in supabase/tests/operational_project_scope_guardrails.sql.
 - Updated CHANGELOG.md with implementation and remaining gates.
 - Latest Vercel production deployment for the updated main commit reports READY.
 
 ## 6. Remaining gates (ordered)
 
-1. Execute the documented Vault key backup procedure: export the application master key directly into external dual-custody escrow, verify retrieval without exposing it, and complete a controlled recovery drill. The runbook exists; the backup and drill remain pending.
+1. Connect an approved external secrets manager or perform the operator-controlled export to a named external secret manager with MFA, access logs, primary + backup custodians, and dual-custody recovery. No external secret-manager connector is currently available in this workspace; no key value was read or exported. Retrieval verification and recovery drill remain pending.
 2. Authorized applicant submits CV Menara Megah registration in Workspace Center using its actual NPWP and designated Company Super Admin email.
 3. Platform Super Admin reviews and accepts the application.
 4. Platform Super Admin issues RFIN-A to the designated email; claimant signs in with that identity and redeems it.
 5. Company Super Admin creates canonical Project UDU under CV Menara Megah and records PT IMK as a CLIENT relationship.
 6. Review and approve every mapping row, including audit events and parent/child integrity.
 7. Backfill legacy operational data using canonical workspace/project IDs; never infer access from BOQ owner labels or roster rows.
-8. Implement restrictive project-scoped RLS on each operational table and test both allowed and denied cross-tenant/cross-project cases before application cutover.
-9. Verify backup/restore and migration rollback/recovery procedures. No staging branch is required for this execution path; production changes must continue to be additive, explicitly reviewed, and independently verified.
+8. Complete the operational cutover prerequisites: add active project context to front-end CRUD/offline sync, migrate evidence Storage paths to <project_uuid>/..., replace the five legacy SECURITY DEFINER mutation RPCs with scoped implementations, implement appointed signatory authority checks, and backfill audit_logs scope. The restrictive RLS policies and one-way activation gate are installed but remain OFF.
+9. Run positive and negative tests with two real canonical Projects and real active memberships (including Company Super Admin without operational grants, unauthorized users, PT IMK non-membership, anonymous QR access, and cross-parent mismatches). Only then call the Platform-Super-Admin-guarded activation RPC.
+10. Verify external key backup/retrieval/recovery and database backup/restore/rollback procedures. No staging branch is required for this execution path; production changes must continue to be additive, explicitly reviewed, and independently verified.
 
 ## 7. Release decision
 
-**NOT READY for tenant provisioning and operational cutover.** The Company Registration/claim lifecycle and Project Registry foundation have been applied and verified. CV Menara Megah has not yet been registered or accepted, no Company Super Admin has claimed the seat, UDU/PT IMK canonical records do not yet exist, and legacy operational RLS/backfill remain incomplete.
+**NOT READY for tenant provisioning and operational cutover.** The Company Registration/claim lifecycle and Project Registry foundation have been applied and verified. CV Menara Megah has not yet been registered or accepted, no Company Super Admin has claimed the seat, UDU/PT IMK canonical records do not yet exist, and legacy data/audit backfill remains incomplete, the RLS enforcement gate remains OFF, front-end active-project context and RPC/storage/signatory cutover remain incomplete, and external NPWP key escrow/recovery is not verified.
