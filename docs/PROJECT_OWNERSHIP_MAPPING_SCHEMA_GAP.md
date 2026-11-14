@@ -387,3 +387,16 @@ All counts must be refreshed before implementation. The snapshot is descriptive,
 **Do not write the first tenant/project backfill migration yet.** Business ownership is confirmed: CV Menara Megah is the tenant/Company Workspace owner, UDU is its operational project, and PT IMK is the client (not a tenant). Remaining blockers are technical provisioning/IDs, canonical Project Registry design, row-level mapping ledger, parent-scope integrity, and migration tests. Preserve all BOQ and audit history; quarantine unresolved technical mappings rather than manufacturing IDs or memberships.
 
 This specification is the pre-migration gate for [P0_REMEDIATION_PLAN.md](./P0_REMEDIATION_PLAN.md). It is not executable SQL and is not production-change authorization.
+
+
+## 11. Row-level ledger and updated technical blockers — 2026-11-14
+
+A live row-level proposal is now committed at [UDU_LEGACY_MAPPING_LEDGER_2026-11-14.csv](./migration/UDU_LEGACY_MAPPING_LEDGER_2026-11-14.csv). It contains 1,440 source rows: 280 boq_items, 39 boq_sections, 13 project_personnel roster rows, 1 project_control row, and 1,107 audit_logs events. Target tenant/project names are populated from the confirmed business decision; target workspace_id/project_id remain intentionally blank pending official provisioning and canonical registry creation.
+
+Current BOQ remark classification: 44 items labelled IMK, 235 labelled contractor, and 1 unclassified. This classification is only a commercial responsibility hint. It is not tenant ownership, Company Membership, or an access grant.
+
+Live snapshot confirms companies=0, company_memberships=0, company_registration_requests=0, workspaces=3 (all PERSONAL), project_control=1, BOQ sections=39, BOQ items=280, project_personnel=13, audit_logs=1,107. The operational transaction/report/document tables listed in the ledger readiness report are empty in this snapshot.
+
+A critical onboarding gap is now recorded: company_registration_requests NPWP fields are nullable and lack a unique deterministic duplicate fingerprint; submit_company_registration does not accept NPWP; companies does not retain encrypted/fingerprint NPWP; current review flow directly creates VERIFIED company + ACTIVE workspace. This does not match SSOT v3.1's ACCEPTED → CLAIM_PENDING + UNCLAIMED seat → RFIN-A claim → ACTIVE lifecycle. Do not use the current approval RPC to provision Menara Megah.
+
+Canonical schema and cutover sequence are specified in [UDU_CANONICAL_PROJECT_REGISTRY_SPEC.md](./UDU_CANONICAL_PROJECT_REGISTRY_SPEC.md) and [UDU_TENANT_PROJECT_CUTOVER_READINESS.md](./UDU_TENANT_PROJECT_CUTOVER_READINESS.md). Backfill remains blocked pending onboarding remediation, claimant designation, canonical project registry/RLS contract, mapping review, and staging rehearsal.
