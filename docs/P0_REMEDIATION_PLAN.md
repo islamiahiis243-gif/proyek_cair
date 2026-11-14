@@ -417,3 +417,24 @@ Business identity is fixed: platform Proyek Cair; tenant CV Menara Megah; projec
 Do not provision Menara Megah using the current company review RPC. Live schema review found NPWP is not enforced as required/unique, the submission RPC does not accept NPWP, companies lacks the required protected NPWP fields, and approval currently creates a VERIFIED company and ACTIVE workspace directly rather than CLAIM_PENDING plus an UNCLAIMED Company Super Admin seat. This conflicts with SSOT v3.1.
 
 The next implementation unit is a dedicated onboarding lifecycle/NPWP remediation, followed by canonical projects/project-client schema and RLS. Only after those are tested should the approved applicant/claimant go through Platform Super Admin approval and RFIN-A claim. Existing legacy data remains untouched.
+
+
+## Update 2026-11-14 20:24 WIB — SSOT v3.1 QR/document closure
+
+A current-state re-audit was performed against USERS_SSOT.md v3.1, the deployed route, view definition, grants, RLS policies, and Storage bucket.
+
+Implemented directly in Supabase production:
+- Removed the anonymous /verify route path from outside AuthGate; it is now AuthGate-protected.
+- The route now calls public.verify_private_document_qr(uuid), a SECURITY INVOKER wrapper over a guarded implementation in the non-exposed private schema.
+- The private verification path requires both active project permissions document.qr.scan and document.qr.verify, verified against active Company Membership and active Project Membership; it returns minimal metadata only.
+- QR verification success and denial attempts are recorded in audit_logs, with no raw token stored.
+- Removed documents_public_verify and revoked anonymous SELECT on public_document_verification, plus all anon table grants on documents and document_signatures.
+- Confirmed bucket project-evidence remains private and its anon access is denied.
+
+Verification:
+- anon cannot execute the RPC, select the public view, or select/insert/truncate documents or document_signatures.
+- authenticated can execute only the public invoker wrapper; a no-UID call returns no data.
+- No document rows or canonical Projects exist, so a positive end-to-end private QR verification with a real project member is pending onboarding and provisioning.
+- The legacy anon verify feature is intentionally now authenticated/private to conform to SSOT v3.1; users need both QR permissions.
+
+Remaining P0 work: implement and verify final-signatory appointment/authority checks before any signature INSERT; replace the legacy SECURITY DEFINER mutation RPCs; add live positive/negative cross-project tests after two real Projects and authorized members exist.
