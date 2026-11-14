@@ -2,14 +2,14 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 3.0
+- **Versi:** 3.1
 - **Tanggal:** 2026-11-14
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
 
 ## 1. Tujuan dan prinsip utama
 
-UDU/Proyek Cair dirancang agar dapat berkembang dari aplikasi internal menjadi platform multi-perusahaan (multi-tenant) yang dapat digunakan banyak organisasi.
+**Proyek Cair adalah nama platform** yang dirancang agar dapat berkembang menjadi platform multi-perusahaan (multi-tenant). **UDU adalah salah satu proyek** di dalam tenant perusahaan. Untuk konteks UDU, **CV Menara Megah adalah tenant/perusahaan**, sedangkan **PT IMK adalah client/pemberi kerja Menara Megah**, bukan tenant kedua.
 
 Prinsip utamanya:
 
@@ -26,6 +26,18 @@ Artinya:
 8. Personal Workspace dan Company Workspace adalah konteks/ruang kerja berbeda dengan kepemilikan, batas data, dan otorisasi terpisah.
 9. Pengguna dapat berkembang dari penggunaan personal menuju penggunaan perusahaan melalui penawaran dan onboarding resmi; penawaran tidak mengubah akses atau privilege dengan sendirinya.
 
+
+
+### 1.1 Konteks bisnis dan penamaan platform/proyek yang telah dikonfirmasi
+
+- **Proyek Cair** adalah nama platform, bukan tenant atau proyek operasional.
+- **UDU** adalah proyek operasional di dalam Company Workspace milik tenant **CV Menara Megah**.
+- **CV Menara Megah** adalah Company/Tenant pemilik Company Workspace untuk UDU.
+- **PT IMK** adalah client/pemberi kerja CV Menara Megah. PT IMK bukan tenant kedua dan tidak boleh dibuatkan Company Workspace atau Company Membership hanya karena disebut pada data proyek.
+- Penyebutan IMK pada item BOQ/material hanya menunjukkan tanggungan, sumber pasokan, atau tanggung jawab komersial client untuk item tertentu. Ini bukan tenant ownership atau akses otomatis.
+- Company Super Admin CV Menara Megah mengatur melalui Proyek Cair Console siapa yang dapat melihat/membaca data, melakukan CRUD, review/approval, TTE/QR signing, serta QR scan/verification. Hak ditetapkan terpisah per pengguna, permission, jenis dokumen, project/resource scope, dan authority.
+- Keputusan bisnis ini tidak berarti Company, Workspace, Membership, Project Registry, atau scope legacy sudah dibuat/di-backfill di database.
+
 ## 2. Terminologi dan pemisahan konsep
 
 Istilah berikut harus digunakan secara konsisten dalam kode, database, API, UI, dan dokumentasi.
@@ -34,7 +46,12 @@ Istilah berikut harus digunakan secara konsisten dalam kode, database, API, UI, 
 |---|---|
 | **User Identity** | Identitas orang yang telah diautentikasi, misalnya melalui Google atau email. Identitas ini tidak sama dengan jabatan atau role. |
 | **Authentication** | Proses membuktikan siapa pengguna melalui penyedia autentikasi. |
-| **Company / Tenant** | Organisasi yang terdaftar di platform dan menjadi batas isolasi data. |
+| **Company / Tenant** | Organisasi yang terdaftar di platform dan menjadi batas isolasi data. Dalam konteks UDU, tenant adalah CV Menara Megah. |
+| **Proyek Cair (Platform)** | Nama platform aplikasi multi-tenant; bukan nama tenant dan bukan nama proyek operasional UDU. |
+| **UDU (Project)** | Nama proyek operasional di dalam Company Workspace tenant CV Menara Megah. |
+| **Client** | Pihak pemberi kerja/pelanggan tenant untuk suatu proyek. PT IMK adalah client CV Menara Megah pada proyek UDU; status client tidak menjadikannya tenant atau Company Workspace. |
+| **Company Workspace** | Ruang kerja milik satu Company/Tenant. Data tenant berada di bawah workspace tenant; proyek-proyeknya menjadi scope turunan di dalam workspace. |
+| **Project / Project Registry** | Record proyek operasional di dalam satu Company Workspace. Satu tenant dapat memiliki beberapa project; project bukan tenant dan client bukan tenant owner. |
 | **Company Membership** | Hubungan antara satu User Identity dan satu Company, beserta status keanggotaannya. |
 | **Employee Record** | Data kepegawaian tambahan conditional/optional bila diperlukan untuk proses operasional tertentu. Bukan daftar seluruh karyawan dan bukan prasyarat universal membership, persona, project scope, approval, atau final signing. |
 | **employee_number** | Nomor Induk Karyawan (Employee Number) yang ditetapkan perusahaan masing-masing; bukan Nomor Induk Kependudukan (NIK), bukan ID internal ProyekCair, dan bukan kredensial login. |
@@ -106,7 +123,7 @@ NPWP merupakan login identifier Company Super Admin, sedangkan kata sandi merupa
 
 #### 3.2.2 ProyekCair Console
 
-Satu Company Super Admin memperoleh akses ke **ProyekCair Console**, yaitu area pengaturan dan tata kelola untuk tenant perusahaannya. Console merupakan bagian dari platform ProyekCair, bukan aplikasi terpisah dan bukan sistem autentikasi tersendiri.
+Satu Company Super Admin memperoleh akses ke **Proyek Cair Console**, yaitu area pengaturan dan tata kelola untuk tenant perusahaannya. Console mengatur akses ke proyek dalam Company Workspace tenant: view/read, CRUD, submit/review/approval, TTE/QR signing, serta QR scan/verification. Console merupakan bagian dari platform ProyekCair, bukan aplikasi terpisah dan bukan sistem autentikasi tersendiri.
 
 Console difokuskan pada pengaturan perusahaan dan pengelolaan akses orang-orang yang diundang. Console bukan tempat menjalankan seluruh aktivitas operasional proyek. Aktivitas operasional dilakukan pada aplikasi ProyekCair sesuai persona, role, permission, project scope, dan authority yang diberikan.
 
@@ -124,6 +141,9 @@ Rute UI yang disarankan (bukan kontrak URL permanen):
 | **Profil Anggota / Employee Record** | Data minimum pengguna perusahaan yang memang memerlukan record kepegawaian untuk penugasan operasional, CRUD tertentu, atau TTE/QR; employee_number bila digunakan. Bukan daftar seluruh karyawan. |
 | **Penugasan Individu** | Penetapan persona, role/permission, level/label jabatan atau approval, authority, project scope, dan masa berlaku per anggota tanpa mewajibkan bagan organisasi, departemen, divisi, atau relasi atasan-bawahan. |
 | **Persona, Role, Permission & Authority** | Pemilihan preset dan penyesuaian assignment per anggota; ringkasan effective access, batas kewenangan, project scope, dan masa berlaku. |
+| **Hak Akses per Proyek/Modul** | Company Super Admin menetapkan hak read/view dan CRUD per modul/resource, project scope, serta masa berlaku. |
+| **Workflow & Approval Rights** | Company Super Admin menetapkan siapa dapat initiate/submit, review, verify, approve, reject, return, dan batas authority untuk setiap workflow. |
+| **TTE/QR & Verification Rights** | Company Super Admin menetapkan siapa dapat final-sign/TTE dan siapa dapat scan/verify QR; hak sign dan hak scan/verify wajib terpisah. |
 | **Pengawasan Operasional** | Penelusuran aktivitas barang, keuangan, progres, K3, dokumen, serta pemeriksaan dan persetujuan berjenjang. |
 | **Workflow & Persetujuan** | Konfigurasi alur review/approval berdasarkan jenis proses, proyek, departemen, nominal, jabatan, dan authority dalam guardrail platform. |
 | **Audit & Riwayat Aktivitas** | Pencarian audit lintas modul: CRUD, import/export, pemeriksaan, persetujuan, perubahan akses, login/sesi, dan perubahan data penting. |
