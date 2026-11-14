@@ -853,15 +853,6 @@ Navbar menyediakan dropdown pemilih konteks kerja dengan pola interaksi seperti 
 Memilih perusahaan/persona mengganti Active Workspace Context dan memperbarui navigasi/menu/widget sesuai effective access. Dropdown tidak boleh menampilkan atau mengizinkan pemilihan perusahaan yang tidak memiliki membership sah. Berpindah konteks bukan proses signup, invitation, atau pemberian privilege. Daftar, status, dan pilihan konteks disediakan/diotorisasi server-side; pilihan UI atau localStorage hanya preferensi tampilan dan tidak pernah menjadi bukti otorisasi.
 
 
-#### 16.1.1 Workspace Switcher / Active Context Selector
-
-Navbar menyediakan dropdown pemilih konteks kerja dengan pola interaksi seperti pemilih entitas pada aplikasi administrasi multi-entitas (analogi UI: Coretax, tanpa klaim integrasi atau kesetaraan sistem). Pilihan minimal:
-- **Personal / Umum (General User Type B)** — menampilkan nama/profil pengguna dan Personal Workspace miliknya;
-- **Perusahaan** — menampilkan nama setiap Company/Tenant tempat User Identity memiliki Company Membership yang valid;
-- **Persona** — setelah perusahaan dipilih, menampilkan persona-persona yang memang ditugaskan kepada pengguna dalam tenant itu.
-
-Memilih perusahaan/persona mengganti Active Workspace Context dan memperbarui navigasi/menu/widget sesuai effective access. Dropdown tidak boleh menampilkan atau mengizinkan pemilihan perusahaan yang tidak memiliki membership sah. Berpindah konteks bukan proses signup, invitation, atau pemberian privilege. Daftar, status, dan pilihan konteks disediakan/diotorisasi server-side; pilihan UI atau localStorage hanya preferensi tampilan dan tidak pernah menjadi bukti otorisasi.
-
 
 ### 16.2 Platform Super Admin Workspace
 
@@ -917,10 +908,6 @@ Company Dashboard dapat menampilkan status profil, total/active memberships, und
 
 Company Console mengutamakan pengelolaan anggota dan penugasan individu. Tidak ada menu atau dependensi wajib untuk membangun departemen, divisi, bagan organisasi, atau relasi atasan-bawahan. Company Super Admin mengatur setiap anggota secara langsung: persona, role/permission, label jabatan/approval bila dipakai, authority, project scope, dan masa berlaku. Employee Record merupakan record minimum hanya untuk use case yang membutuhkannya sebagaimana bagian 4.1; ia bukan registri seluruh tenaga kerja perusahaan. Project Membership/Scope tetap wajib ditegakkan secara terpisah dan tidak boleh ditiadakan hanya karena Org Structure Builder tidak digunakan.
 
-
-#### 16.3.0 Administrasi anggota tanpa bagan organisasi wajib
-
-Company Console mengutamakan pengelolaan anggota dan penugasan individu. Tidak ada menu atau dependensi wajib untuk membangun departemen, divisi, bagan organisasi, atau relasi atasan-bawahan. Company Super Admin mengatur setiap anggota secara langsung: persona, role/permission, label jabatan/approval bila dipakai, authority, project scope, dan masa berlaku. Employee Record merupakan record minimum hanya untuk use case yang membutuhkannya sebagaimana bagian 4.1; ia bukan registri seluruh tenaga kerja perusahaan. Project Membership/Scope tetap wajib ditegakkan secara terpisah dan tidak boleh ditiadakan hanya karena Org Structure Builder tidak digunakan.
 
 
 #### 16.3.1 Konfigurasi invitation dan preview akses
@@ -984,10 +971,6 @@ Matriks modul hanyalah template UX. Hak create/read/update/delete/review/approve
 
 Pembuat/pengaju dokumen dapat memilih urutan approver secara individual untuk dokumen tersebut, termasuk jumlah tahap yang sesuai kebutuhan. Template workflow dapat membantu, tetapi bukan keharusan. Ketika rangkaian disimpan/dimulai, notifikasi dikirim kepada seluruh approver yang ditetapkan secara paralel. Eksekusi keputusan tetap serial: backend hanya menerima tindakan dari approver pada step aktif; tindakan dari approver tahap lain harus ditolak. Pemilihan nama/akun oleh pembuat dokumen tidak memberi hak secara otomatis—backend wajib memvalidasi User Identity, Company Membership aktif, permission tindakan, authority/policy yang berlaku, project/resource scope, status aktif, dan tidak adanya konflik/larangan. Perubahan approver setelah workflow dimulai harus melalui prosedur terkendali dan teraudit.
 
-
-#### 16.4.1a Assignment approver per dokumen dan notifikasi paralel
-
-Pembuat/pengaju dokumen dapat memilih urutan approver secara individual untuk dokumen tersebut, termasuk jumlah tahap yang sesuai kebutuhan. Template workflow dapat membantu, tetapi bukan keharusan. Ketika rangkaian disimpan/dimulai, notifikasi dikirim kepada seluruh approver yang ditetapkan secara paralel. Eksekusi keputusan tetap serial: backend hanya menerima tindakan dari approver pada step aktif; tindakan dari approver tahap lain harus ditolak. Pemilihan nama/akun oleh pembuat dokumen tidak memberi hak secara otomatis—backend wajib memvalidasi User Identity, Company Membership aktif, permission tindakan, authority/policy yang berlaku, project/resource scope, status aktif, dan tidak adanya konflik/larangan. Perubahan approver setelah workflow dimulai harus melalui prosedur terkendali dan teraudit.
 
 
 ### 16.4.2 Workflow operasional
