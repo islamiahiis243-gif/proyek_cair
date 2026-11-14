@@ -50,3 +50,17 @@
 - Negative authorization checks rejected RFIN-A issuance by a General User, RFIN-B issuance by a non-Company-Super-Admin, and company registration approval by a non-Platform-Super-Admin.
 - Supabase Security Advisor no longer reports the RFIN or company-review functions as exposed SECURITY DEFINER RPCs. Six pre-existing legacy operational SECURITY DEFINER functions remain flagged, plus the existing leaked-password-protection warning.
 - Browser end-to-end tests with separate real user sessions have intentionally not been run; they are the user's next verification step after this commit/deploy.
+
+
+## Tenant/project clarification and cutover status — 2026-11-14
+
+The business decision is final: Proyek Cair is the platform; CV Menara Megah is the tenant and Company Workspace owner; UDU is the operational project; PT IMK is the client, not a tenant. IMK/contractor labels on BOQ rows represent commercial responsibility only.
+
+The current DB does not yet contain the Menara Megah Company or Company Workspace. It contains three Personal Workspaces, zero Companies, zero Company Memberships, and zero company registration requests. The current company onboarding RPC/schema has NPWP and lifecycle gaps against SSOT v3.1; do not provision via the existing review RPC until fixed.
+
+The row-level ledger, canonical registry design, and cutover readiness are documented in:
+- docs/migration/UDU_LEGACY_MAPPING_LEDGER_2026-11-14.csv
+- docs/UDU_CANONICAL_PROJECT_REGISTRY_SPEC.md
+- docs/UDU_TENANT_PROJECT_CUTOVER_READINESS.md
+
+No tenant, project, membership, or legacy row was created or reassigned in this stage.
