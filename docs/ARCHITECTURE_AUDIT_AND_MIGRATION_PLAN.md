@@ -6,6 +6,13 @@
 - **Status:** Audit selesai; fase fondasi additive diterapkan; migrasi operasional multi-tenant belum selesai.
 - **Prinsip keselamatan:** Tidak mengubah atau memindahkan data operasional lama secara massal sebelum project ownership dan tenant boundary disepakati serta diuji.
 
+## Business naming and ownership clarification — 14 November 2026
+- Proyek Cair is the platform name.
+- UDU is an operational project within the Company Workspace owned by tenant CV Menara Megah.
+- PT IMK is the client of CV Menara Megah on project UDU, not a tenant. Item-level IMK supply/responsibility labels are commercial attributes, not tenant ownership.
+- Company Super Admin for CV Menara Megah configures view/read, CRUD, workflow/approval, TTE/QR signing, and QR scan/verification permissions in the Proyek Cair Console.
+- This business decision does not imply Company, Company Workspace, memberships, or project registry are already provisioned in the database; historical records have not been moved.
+
 ## 1. Executive summary
 
 Aplikasi saat ini adalah Vite + React + TypeScript dengan Supabase Auth/Postgres. Alur autentikasi sudah mendukung email/password dan Google OAuth. Profil pengguna masih menggunakan satu tabel `profiles` dengan role global sederhana. Modul BOQ, inventory, cash, documents, progress, safety, media, dan personnel masih merupakan domain operasional proyek lama yang belum memiliki workspace/tenant scope.
@@ -91,7 +98,7 @@ Profil existing sudah tertaut ke Personal Workspace. Belum ada Company row, Comp
 **Jangan mengubah seluruh tabel operasional menjadi personal-owned atau company-owned secara otomatis.**
 
 Alasan:
-- Satu proyek lama memuat kepentingan PT IMK dan CV Menara Megah; itu tidak membuktikan bahwa salah satu dari keduanya adalah tenant owner yang tepat.
+- Satu proyek UDU berada dalam tenant CV Menara Megah; PT IMK adalah client. Client-side item responsibility tidak membuat PT IMK menjadi tenant.
 - `project_personnel` berisi 13 orang, bukan 13 akun Auth.
 - BOQ 280 items dan audit 1,107 baris merupakan data operasional historis.
 - Tidak ada transaksi stok/kas atau laporan operasional yang perlu dipindahkan pada snapshot saat ini, tetapi relasi dan kepemilikan BOQ/project tetap perlu keputusan eksplisit.
@@ -128,7 +135,7 @@ Untuk sementara, aplikasi mempertahankan modul operasional legacy dan tidak mena
 - Uji aturan satu Company Super Admin aktif per perusahaan.
 
 ### Fase 4 — Migrasi project-operational domain
-- Putuskan ownership model proyek: tenant sponsor/owner, kontraktor pelaksana, client, dan project membership perlu direpresentasikan terpisah.
+- Business ownership sudah dikonfirmasi: tenant CV Menara Megah, project UDU, client PT IMK. Implementasikan model terpisah untuk Company/Tenant, Company Workspace, Project, client relationship, commercial item responsibility, dan Project Membership.
 - Buat `projects` dan `project_memberships`; jangan menyamakan Company dengan Project.
 - Tambahkan `workspace_id` atau `project_id` pada tabel operasional melalui nullable/additive columns.
 - Backfill hanya setelah mapping proyek disetujui; untuk record ambigu, biarkan unassigned dan blok akses lintas tenant sampai direkonsiliasi.
