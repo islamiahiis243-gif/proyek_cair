@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 2.7
+- **Versi:** 3.0
 - **Tanggal:** 2026-11-14
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -94,7 +94,7 @@ Calon Company/Tenant mengajukan registrasi melalui aplikasi menggunakan NPWP dan
 5. Setelah `ACCEPTED`, sistem membuat/mengaktifkan Company/Tenant dan menyediakan tepat satu kursi Company Super Admin. Penerimaan aplikasi dan aktivasi kursi admin adalah state/proses terpisah.
 6. Company Super Admin melakukan sign-up menggunakan email atau Google. Setelah sign-up dan provisioning kursi Company Super Admin disetujui, akun ditautkan ke Company/Tenant dan User Identity internal yang stabil (`auth.users.id`). Untuk sign-in berikutnya, Company Super Admin menggunakan NPWP perusahaan sebagai login identifier dan kata sandi sebagai credential rahasia. NPWP bukan kata sandi dan tidak boleh diperlakukan sebagai secret. Sistem memverifikasi pasangan NPWP + kata sandi, lalu memetakan sesi terautentikasi ke User Identity dan tenant yang tepat. Password disimpan hanya dalam bentuk hash menggunakan mekanisme password hashing yang aman; implementasi wajib menyediakan rate limiting, proteksi brute-force/credential stuffing, lockout atau throttling adaptif, reset/recovery aman, dan audit peristiwa autentikasi.
 7. Kursi Company Super Admin tetap terikat pada User Identity internal stabil (`auth.users.id`) untuk relasi dan audit. Login khusus memetakan sesi terverifikasi ke User Identity tersebut; NPWP tidak menggantikan `user_id`.
-8. Platform Super Admin menjalankan provisioning/aktivasi kursi tunggal melalui Platform Administration Engine. RFIN-A dapat dipakai sebagai credential aktivasi satu kali bila diperlukan, tetapi bukan faktor login berulang atau pengganti A2F.
+8. Platform Super Admin menjalankan provisioning/aktivasi kursi tunggal melalui Platform Administration Engine. RFIN-A dapat dipakai sebagai credential aktivasi/claim satu kali bila diperlukan. RFIN-A bukan faktor login berulang. A2F/MFA adalah fitur keamanan opsional yang disediakan platform dan dapat diwajibkan oleh kebijakan tenant untuk kelompok pengguna atau tindakan tertentu; bukan syarat universal aktivasi Company Super Admin.
 9. RFIN-A, bila digunakan, memiliki entropy tinggi, expiry, tenant binding, rate limit, redemption atomik satu kali, dan disimpan sebagai hash setelah issuance.
 10. Penggantian pemegang kursi, perubahan metode autentikasi, dan recovery diajukan melalui Console kepada Platform Super Admin melalui Platform Administration Engine dengan keputusan accept/reject dan audit lengkap. Tidak boleh ada dua kursi Company Super Admin aktif bersamaan.
 
@@ -102,7 +102,7 @@ Istilah resmi credential aktivasi perusahaan adalah **RFIN-A**. RFIN-A bukan cre
 
 **Pemisahan penting:** NPWP mengidentifikasi perusahaan; User Identity personal mengidentifikasi orang yang bertanggung jawab mengoperasikan akun Company Super Admin; kode aktivasi membuktikan hak untuk mengklaim kursi administrator pada proses awal. Ketiganya tidak boleh diperlakukan sebagai satu kredensial bersama.
 
-NPWP merupakan login identifier Company Super Admin, sedangkan kata sandi merupakan credential rahasia untuk sign-in. Email/Google digunakan pada proses sign-up dan pengaitan awal User Identity; bukan berarti NPWP menjadi password. Setelah akun diprovisioning, sign-in menggunakan pasangan NPWP + kata sandi dan sesi harus dipetakan ke `auth.users.id` serta tenant yang tepat. Reset password, pemulihan akun, dan penggantian pemegang kursi dilakukan melalui prosedur aman pada Platform Administration Engine dan wajib diaudit.
+NPWP merupakan login identifier Company Super Admin, sedangkan kata sandi merupakan credential rahasia untuk sign-in. Email/Google digunakan pada proses sign-up dan pengaitan awal User Identity; bukan berarti NPWP menjadi password. Setelah akun diprovisioning, sign-in menggunakan pasangan NPWP + kata sandi dan sesi harus dipetakan ke `auth.users.id` serta tenant yang tepat. Reset password, pemulihan akun, dan penggantian pemegang kursi dilakukan melalui prosedur aman pada Platform Administration Engine dan wajib diaudit. A2F/MFA (misalnya TOTP authenticator, passkey/security key, atau metode MFA provider yang secara eksplisit didukung platform) merupakan opsi keamanan yang ditawarkan Platform. Secara default fitur ini tidak wajib bagi seluruh tenant. Company Super Admin dapat mengaktifkan metode yang tersedia untuk tenant, menetapkan cakupan pengguna/tindakan, dan mewajibkannya berdasarkan risiko. Google OAuth sebagai metode sign-in tidak otomatis berarti A2F ProyekCair aktif; faktor kedua hanya dianggap terpenuhi jika ada sinyal/provider flow MFA yang tervalidasi atau challenge MFA ProyekCair yang berhasil.
 
 #### 3.2.2 ProyekCair Console
 
@@ -145,15 +145,23 @@ Aturan custom:
 6. Perubahan role, permission, persona, project scope, dan authority harus dicatat dalam audit log dengan alasan perubahan bila relevan.
 7. Perubahan konfigurasi tidak boleh berlaku hanya karena UI menampilkan pilihan; backend/database wajib memvalidasi dan menegakkan seluruh batasnya.
 
-#### 3.2.5 Undangan anggota perusahaan
+#### 3.2.5 Undangan anggota perusahaan dan RFIN-B
 
-- Hanya satu Company Super Admin aktif yang menjadi pemegang kewenangan tertinggi administrasi tenant.
-- Company Super Admin dapat mengundang banyak pengguna sesuai kebijakan/lisensi platform.
-- Pengguna yang diundang login menggunakan identitas personal masing-masing (Google/email atau provider resmi lain yang didukung).
-- Invitation anggota bukan kode aktivasi Company Super Admin dan tidak dapat membuat Company Super Admin kedua.
-- Invitation memberikan membership dan role/persona/authority awal sesuai konfigurasi undangan.
-- Company Super Admin dapat mengubah, menangguhkan, atau mencabut akses pengguna yang diundang dalam batas policy.
-- Pengguna yang diundang tidak otomatis memperoleh akses Console. Akses penuh Console hanya dimiliki pemegang kursi Company Super Admin tunggal. Jika kelak dibutuhkan bantuan administratif, platform dapat merancang permission delegasi yang sangat terbatas secara terpisah; delegasi tersebut bukan Company Super Admin dan tidak boleh mengubah aturan satu akun utama.
+Company Super Admin memulai proses dengan menambahkan **calon anggota/individu terkait (invitee)** ke daftar undangan perusahaan, kemudian menetapkan konfigurasi akses orang tersebut. Istilah invitee ini tidak sama dengan **Orang Terkait** dalam arti beneficial owner/pemilik/pengendali perusahaan pada glossary.
+
+Alur normatif:
+1. Company Super Admin membuat draft undangan dengan identitas tujuan yang dapat dihubungi (email wajib untuk pengiriman; nama tampilan dan nomor telepon opsional), tenant tujuan, serta catatan/employee_number bila memang diperlukan. Email tujuan dinormalisasi dan menjadi binding undangan; employee_number bukan login credential.
+2. Sebelum penerbitan, Company Super Admin memilih satu atau beberapa persona, minimal satu role yang relevan untuk akses operasional, permission dari katalog platform, project scope bila tindakan memerlukannya, authority bila proses memerlukannya, serta tanggal mulai/akhir bila diperlukan. Employee Record tetap opsional dan dibuat hanya bila use case memerlukannya.
+3. Sistem menampilkan Effective Access Preview: identitas tujuan, tenant, persona, role, permission efektif, project/resource scope, authority/limit, masa berlaku, kemampuan yang tidak diberikan, dan potensi konflik. Penerbit harus mengonfirmasi bahwa konfigurasi sesuai tanggung jawab orang tersebut.
+4. Setelah konfirmasi, backend menerbitkan RFIN-B unik, acak berentropi tinggi, terikat pada tenant, email tujuan, dan snapshot konfigurasi; token disimpan sebagai hash, memiliki expiry dan batas redemption satu kali. RFIN-B dikirim melalui kanal terverifikasi (email atau kanal lain yang diaktifkan platform). Jangan menampilkan ulang plaintext setelah issuance.
+5. Invitee membuka tautan/memasukkan RFIN-B, melakukan sign-up atau sign-in dengan Google/email yang didukung, dan membuktikan kontrol atas email yang sama dengan binding undangan. Jika invitee sudah mempunyai User Identity, sistem menautkan undangan ke identitas tersebut setelah autentikasi ulang yang sesuai; jangan membuat identitas duplikat.
+6. Sebelum redemption, sistem menampilkan ringkasan perusahaan dan akses yang akan diterima. Invitee menyetujui undangan; backend memvalidasi token, expiry, status tenant, binding email, kapasitas penerbit, snapshot konfigurasi, serta kebijakan saat redemption.
+7. Redemption atomik mengubah Invitation menjadi `REDEEMED`, membuat/mengaktifkan Company Membership sesuai kebijakan, dan menerapkan persona/role/permission/project scope/authority yang sudah disetujui. Jika policy tenant memerlukan pemeriksaan pasca-redemption, membership tetap `PENDING` sampai keputusan eksplisit; selain itu membership menjadi `ACTIVE` pada transaksi redemption yang sama. Tidak boleh ada kondisi parsial di mana token habis tetapi membership/assignment gagal tanpa mekanisme transaksi/kompensasi yang aman.
+8. Semua perubahan setelah RFIN-B diterbitkan dilakukan melalui revisi undangan (revoke undangan lama dan terbitkan yang baru) atau perubahan assignment setelah membership aktif. Snapshot historis undangan tidak boleh ditimpa.
+
+Lifecycle Invitation: `DRAFT → ACTIVE → REDEEMED`, dengan cabang `REVOKED` atau `EXPIRED`. Hanya `ACTIVE` yang dapat diredeem. Lifecycle Membership terpisah: `PENDING → ACTIVE`, atau `SUSPENDED`, `REVOKED`, `EXPIRED` sesuai policy. `REDEEMED` adalah status Invitation, bukan Membership. Invitation yang `REDEEMED` tidak dapat dipakai lagi. Pengiriman ulang menggunakan token baru atau mekanisme delivery ulang yang tidak mengekspos token lama; penerbitan ulang membatalkan token sebelumnya.
+
+RFIN-B tidak memberikan Company Super Admin atau Platform Super Admin, tidak melampaui permission/authority penerbit, tidak menggantikan autentikasi, dan bukan password. Company Super Admin dapat mengubah, menangguhkan, atau mencabut membership setelah aktif dalam batas policy. Pengguna undangan tidak otomatis memperoleh akses Console; kursi Company Super Admin tetap tunggal.
 
 #### 3.2.6 Penggantian dan pemulihan Company Super Admin
 
@@ -1116,8 +1124,281 @@ Isi menu dan widget di bagian ini adalah target arsitektur. Hal-hal berikut belu
 
 Keputusan tersebut harus dituangkan pada katalog permission, frontend-backend contract, database mapping, RLS/authorization matrix, dan test matrix sebelum implementasi.
 
+
+## 17. Autentikasi, A2F/MFA, dan provisioning Company Super Admin
+
+### 17.1 Pemisahan registrasi, autentikasi pemohon, dan signup pemegang kursi
+
+Tiga objek berikut tidak boleh disatukan:
+- **Company Application:** permohonan pendaftaran perusahaan yang dikirim oleh seorang actor terautentikasi. Google/email pada tahap ini membuktikan kontrol atas akun pemohon dan mengikat audit actor; tidak membuktikan kewenangan legal mewakili perusahaan.
+- **Company/Tenant provisioning:** tindakan administratif Platform setelah aplikasi diputuskan ACCEPTED. Provisioning menyiapkan tenant dalam status onboarding/claim-pending, bukan otomatis memberikan akses kepada pemohon.
+- **Company Super Admin account signup/claim:** proses signup baru oleh orang yang akan menjadi pemegang kursi. Proses ini harus dijalankan seperti signup User Identity baru (atau sign-in/reauthentication bila orang tersebut sudah memiliki User Identity), melalui Google/email yang didukung, verifikasi email/provider, persetujuan kebijakan, dan claim kursi melalui RFIN-A/aktivasi terikat. Persetujuan Platform adalah prasyarat; tidak ada auto-provisioning akun hanya karena Company Application diterima.
+
+Pemohon Company Application dan calon pemegang kursi Company Super Admin boleh orang yang sama atau berbeda. Platform Super Admin menetapkan/mengonfirmasi penerima kursi saat provisioning. Jika berbeda, perubahan penerima harus tercatat. Identitas pemohon tidak otomatis menjadi pemegang kursi dan tidak otomatis memperoleh membership.
+
+Lifecycle yang direkomendasikan:
+- Company Application: PENDING → ACCEPTED | REJECTED.
+- Tenant onboarding: CLAIM_PENDING → ACTIVE; dapat menjadi SUSPENDED atau CLOSED setelah aktif.
+- Company Super Admin seat: UNCLAIMED → CLAIM_PENDING → ACTIVE; transfer menggunakan proses khusus dan tidak pernah membuat dua seat aktif.
+- RFIN-A: ACTIVE → REDEEMED, atau REVOKED | EXPIRED.
+
+Pada penerimaan aplikasi, Platform membuat tenant/record provisioning dan menerbitkan RFIN-A yang terikat pada tenant serta calon pemegang kursi. Calon pemegang melakukan signup/sign-in, memverifikasi identitas provider/email yang terikat, menyelesaikan claim, lalu backend dalam satu transaksi mengikat auth.users.id ke kursi. Tenant menjadi ACTIVE setelah claim sukses dan seluruh pemeriksaan provisioning selesai. Bila RFIN-A tidak digunakan, Platform dapat memakai alur claim setara yang aman dan teraudit. Pengajuan yang ditolak tidak menghasilkan tenant aktif atau seat.
+
+### 17.2 Sign-in Company Super Admin
+
+Sign-up/claim menggunakan email atau Google sebagai metode pembuatan/pengaitan User Identity. Sign-in berikutnya menggunakan NPWP perusahaan sebagai login identifier dan kata sandi sebagai credential rahasia sesuai keputusan v2.7. NPWP tidak pernah diperlakukan sebagai secret. Backend harus menyelesaikan NPWP ke tenant/seat aktif secara aman, memverifikasi password melalui mekanisme Auth yang aman, lalu membuat sesi yang terikat ke User Identity pemegang seat dan tenant yang tepat. Jangan mengandalkan NPWP atau company_id dari client sebagai otorisasi.
+
+### 17.3 A2F/MFA sebagai fitur platform opsional dan kebijakan tenant
+
+A2F/MFA bukan kewajiban universal pada baseline. Platform menyediakan katalog metode yang telah didukung dan diuji, misalnya TOTP authenticator, passkey/WebAuthn/security key, serta MFA provider eksternal bila integrasi dan sinyal assurance-nya benar-benar tersedia. Company Super Admin dapat mengaktifkan metode yang ditawarkan Platform untuk tenant, menetapkan kelompok pengguna, tindakan sensitif, grace period, recovery policy, dan tingkat kewajiban. Platform dapat menetapkan baseline minimum atau mewajibkan MFA untuk tindakan platform/global tertentu.
+
+Aturan:
+1. Tenant hanya dapat memilih metode yang sudah diaktifkan dan didukung Platform; tenant tidak dapat memasukkan provider arbitrer atau mengubah protokol keamanan global.
+2. Google sign-in/OAuth adalah metode autentikasi primer. Ia tidak otomatis menjadi faktor kedua ProyekCair. Hanya MFA provider yang dapat diverifikasi atau challenge ProyekCair yang sukses yang dihitung sebagai A2F.
+3. A2F dapat diwajibkan untuk Company Super Admin, administrator/delegated admin, akses finansial/dokumen/signing, atau tindakan berisiko tinggi sesuai policy tenant.
+4. Pengguna diberi masa enrollment dan recovery yang jelas. Kehilangan faktor kedua menggunakan recovery codes sekali pakai atau prosedur pemulihan terverifikasi dan teraudit; dukungan tidak boleh menonaktifkan MFA tanpa pemeriksaan.
+5. Perubahan metode MFA, reset faktor, dan pengecualian wajib diaudit. Rate limiting, anti-enumeration, lockout/throttling, device/session management, dan notifikasi keamanan berlaku.
+6. Tenant dapat memilih OFF, OPTIONAL, atau REQUIRED untuk kelompok/tindakan yang diizinkan Platform. Platform dapat mengunci kebijakan minimum untuk peran atau tindakan platform tertentu.
+
+## 18. Permission model dan baseline matriks aplikasi konvensional
+
+Permission model ProyekCair adalah authorization aplikasi bisnis konvensional, bukan sistem kewenangan pemerintah. Tujuannya membatasi siapa dapat melihat dan mengelola data, menjalankan transaksi, memeriksa/mengotorisasi proses, serta menandatangani dokumen. Nama jabatan/persona tidak memberikan akses otomatis. Matriks berikut adalah baseline katalog permission; Platform dapat menambah permission terkontrol, sedangkan tenant hanya menugaskan permission yang tersedia dalam guardrail.
+
+### 18.1 Pola permission standar
+
+Setiap resource menggunakan aksi sesuai kebutuhan: read, create, update, archive, delete (hanya bila aman), dan aksi domain seperti submit, review, verify, approve, reject, return, issue, sign, void, reverse, export, assign, manage. Hak list/detail juga tunduk pada tenant, project/resource scope, klasifikasi data, dan hubungan aktor-resource.
+
+**Prinsip delete:** transaksi kas, mutasi stok, BOQ yang sudah dipakai, dokumen terbit/ditandatangani, approval event, membership historis, dan audit event tidak dihapus fisik melalui CRUD biasa. Gunakan void/reversal/correction/superseding record dengan alasan dan audit. Hard delete hanya untuk draft/resource yang belum direferensikan dan sesuai retention policy.
+
+### 18.2 Baseline matriks per modul
+
+| Modul/resource | Read | Create | Update | Archive/delete | Aksi domain khusus |
+|---|---|---|---|---|---|
+| Company Profile | company.profile.read | — | company.profile.update_request | — | company.profile.change_approve oleh Platform bila field platform-controlled |
+| Member & Membership | membership.read | membership.invite | membership.update | revoke/suspend, bukan hard delete | membership.manage, membership.reactivate |
+| Invite/RFIN-B | invitation.read | invitation.create | revise via revoke+reissue | invitation.revoke | invitation.resend, invitation.preview |
+| Employee Record | employee.read | employee.create | employee.update | archive; hard delete hanya sebelum dipakai | employee.manage |
+| Persona/Role/Permission | access_assignment.read | access_assignment.create | access_assignment.update | revoke/expire | access_assignment.manage, role.assign |
+| Project | project.read | project.create | project.update | archive, bukan hapus bila ada histori | project.assign, project.close |
+| BOQ | boq.read | boq.create | boq.update | archive bila belum direferensikan | boq.submit, boq.review, boq.approve, boq.addition.create, boq.revision |
+| Progress | progress.read | progress.create | progress.update pada draft | archive draft | progress.submit, progress.review, progress.verify, progress.approve, progress.return |
+| Procurement | procurement.read | procurement.create | procurement.update pada status yang diizinkan | archive draft | procurement.submit, procurement.review, procurement.approve, procurement.issue_order, procurement.receive |
+| Inventory | inventory.read | inventory.movement.create | koreksi melalui event baru | tidak hard delete | inventory.movement.review, inventory.movement.approve, inventory.movement.reverse, inventory.count |
+| Cash/Finance | cash.read | cash.transaction.create | update draft saja | tidak hard delete | cash.transaction.submit, cash.transaction.review, cash.transaction.approve, cash.transaction.void, cash.transaction.reverse, cash.export |
+| K3/HSE | k3.read | k3.report.create | k3.report.update pada draft | archive sesuai policy | k3.report.submit, k3.report.review, k3.report.close, k3.incident.manage |
+| Documents | document.read | document.create | document.update pada draft | archive draft; terbit menggunakan supersede/void | document.submit, document.review, document.approve, document.issue, document.sign, document.void, document.replace |
+| QR/TTE | read hanya melalui document permission | — | — | — | document.qr.scan, document.qr.verify, document.sign |
+| Workflow | workflow.read | workflow.definition.create | workflow.definition.update | deactivate definition | workflow.start, workflow.cancel, workflow.step.act, workflow.delegate, workflow.reassign |
+| Audit | audit.read | server-generated | — | tidak boleh | audit.export jika diizinkan |
+| Notifications | notification.read | server-generated | notification.preference.update | dismiss milik sendiri | notification.manage terbatas |
+| Personal Workspace | personal.resource.read | personal.resource.create | personal.resource.update | archive/delete sesuai lifecycle personal | personal.export, personal.delete_request, personal.restore |
+
+Tanda "—" berarti tidak tersedia sebagai operasi langsung atau menggunakan alur khusus. Permission tambahan dapat dipisah lebih granular saat modul memerlukannya, tetapi harus mengikuti prinsip least privilege dan mempunyai deskripsi, resource scope, risk level, serta test case.
+
+### 18.3 Guardrail role dan akses efektif
+
+- **Company Super Admin** memiliki hak administrasi tenant melalui seat khusus, bukan melalui role operasional yang dapat diberikan ke orang lain. Seat ini tidak otomatis memberi hak melakukan transaksi operasional atau final signing.
+- Role preset awal (Project Manager, Site Engineer, Procurement, Finance, Storekeeper, HSE Officer, Document Controller, Viewer) hanyalah bundel rekomendasi. Platform menyediakan definisi awal; Company Super Admin dapat memilih/customize kombinasi yang diizinkan.
+- Hindari role universal "Admin" yang otomatis memiliki semua permission operasional. Hak Console dan hak operasional harus terpisah.
+- Permission untuk approve/review/sign tidak otomatis mengikuti create/update. Pembuat transaksi tidak boleh menyetujui transaksinya sendiri bila policy menetapkan segregation of duties; baseline melarang self-approval untuk transaksi finansial dan dokumen formal.
+- Effective access dihitung dari membership aktif + persona aktif + role assignment + permission + attributes + resource relationship + project scope + authority + workflow state. Deny pada status tenant/member/resource atau policy global mengalahkan grant.
+- Company Super Admin hanya dapat memberi permission dalam batas yang ia miliki/yang diizinkan policy. Tidak boleh privilege escalation lewat invitation, custom role, atau project assignment.
+
+## 19. Workflow Engine: kontrak, SLA, delegasi, dan eskalasi
+
+Workflow adalah rangkaian state transition bisnis yang dijalankan backend. Frontend hanya meminta tindakan; backend/RPC menentukan apakah transisi sah. Approval serial dan notifikasi awal paralel tetap berlaku.
+
+### 19.1 State dan invariants
+
+Workflow instance: DRAFT → ACTIVE → COMPLETED, dengan cabang RETURNED, REJECTED, CANCELLED, atau EXPIRED sesuai jenis proses. Step: PENDING → ACTIVE → APPROVED, atau REJECTED | RETURNED | SKIPPED bila policy mengizinkan. Hanya satu step serial yang boleh berstatus ACTIVE pada satu waktu, kecuali jenis workflow secara eksplisit mendukung parallel approval melalui keputusan policy terpisah; baseline ProyekCair tetap serial.
+
+Invariants:
+- Workflow dimulai hanya jika initiator memiliki permission, tenant/member aktif, resource scope benar, dokumen/transaksi eligible, dan approver chain tervalidasi.
+- Setiap step mempunyai assignee User Identity tertentu atau eligible pool yang diselesaikan menjadi assignee konkret sebelum step aktif.
+- Hanya assignee aktif atau delegate sah yang boleh bertindak; notifikasi tidak memberikan permission.
+- Backend memeriksa ulang membership, permission, authority, project/resource scope, konflik kepentingan, resource version/status, dan current step pada setiap mutasi.
+- Mutasi step menggunakan transaksi atomik/optimistic concurrency (expected version) agar dua request bersamaan tidak menghasilkan dua keputusan.
+- Rejection/return memerlukan reason; resubmission membuat event/attempt baru tanpa menghapus histori.
+- Workflow tidak otomatis menyetujui ketika SLA lewat.
+
+### 19.2 Kontrak API/RPC konseptual
+
+Nama di bawah adalah kontrak semantik, bukan klaim fungsi tersebut sudah ada atau nama final implementasi. Semua endpoint/RPC memerlukan autentikasi dan server-side Active Context Resolver.
+
+| Operasi | Input minimum | Validasi dan hasil |
+|---|---|---|
+| workflow_definition.create/update | tenant, process_type, version, step templates, SLA policy | hanya admin/workflow manager berizin; validasi permission/authority guardrail; versi aktif immutable |
+| workflow.preview | resource_type/id, proposed approvers, context | simulasi eligibility, urutan, authority, konflik, SLA; tidak membuat workflow |
+| workflow.start | resource_type/id, expected_resource_version, ordered_approver_ids, idempotency_key | validasi initiator, resource, tenant, seluruh approver; snapshot chain; buat instance dan step pertama ACTIVE |
+| workflow.step.act | workflow_id, step_id, action, reason/comment, expected_version, idempotency_key | hanya current active assignee/delegate; action approve/reject/return; simpan event; aktifkan step berikutnya atau finalisasi |
+| workflow.delegate | workflow_id, step_id, delegate_user_id, start/end, reason | delegator berwenang; delegate eligible dalam tenant/scope; batas waktu; approval policy; audit |
+| workflow.reassign | workflow_id, step_id, new_assignee_id, reason | hanya actor berwenang; revalidasi; cabut assignee lama; audit dan notifikasi |
+| workflow.cancel | workflow_id, reason, expected_version | initiator/admin berizin; cek status dan policy; audit |
+| workflow.remind/escalate | workflow_id/step_id, trigger | internal scheduler/service identity; tidak memberi hak approval; audit event |
+| workflow.read | resource/workflow id | tenant/scope/participant authorization; redaksi data sensitif |
+
+Setiap operasi mutasi harus mengembalikan status terkini, active step, next due date, event id, dan error code stabil seperti NOT_AUTHORIZED, WRONG_ACTIVE_STEP, STALE_VERSION, INVALID_TRANSITION, RESOURCE_NOT_ELIGIBLE, atau POLICY_VIOLATION. Jangan mengembalikan detail resource lintas tenant.
+
+### 19.3 SLA default, reminder, dan eskalasi
+
+Default awal jika tenant tidak mengatur lain:
+- SLA setiap step: **2 hari kerja** sejak step menjadi ACTIVE; hari kerja Senin–Jumat, 08.00–17.00 pada timezone tenant (default Asia/Jakarta), tidak termasuk hari libur yang dimasukkan tenant.
+- Reminder: saat aktivasi, 1 hari kerja sebelum due, dan pada saat due.
+- Eskalasi: 1 hari kerja setelah due ke atasan workflow yang ditetapkan atau Company Super Admin/monitor yang diberi permission workflow.escalation.read; eskalasi kedua setiap 2 hari kerja jika masih tertunda.
+- Eskalasi hanya notifikasi/monitoring dan tidak otomatis mengubah assignee, melewati step, atau menyetujui.
+- Pause SLA hanya pada status RETURNED/menunggu perbaikan oleh initiator atau ketika workflow resmi ditangguhkan; clock aktif kembali saat resubmission/step diaktifkan.
+- Tenant dapat mengatur SLA, kalender kerja, reminder, dan escalation recipients dalam guardrail Platform. Perubahan berlaku untuk instance baru kecuali perubahan aktif disetujui dan dicatat.
+- Keterlambatan tidak mengubah validitas approval. Tidak ada auto-approval.
+
+### 19.4 Delegasi dan penggantian approver
+
+- Delegasi harus eksplisit, memiliki alasan, tanggal mulai/akhir, scope proses/proyek, dan audit.
+- Delegate harus User Identity aktif dengan Company Membership aktif pada tenant yang sama, permission dan authority yang cukup, serta project/resource scope yang sesuai.
+- Delegasi tidak dapat memperluas authority delegator, tidak lintas tenant, tidak dapat mendelegasikan final signing kecuali policy signing secara eksplisit mendukung dan appointment signatory juga valid.
+- Default masa delegasi maksimum 30 hari; perpanjangan memerlukan persetujuan ulang.
+- Self-delegation, delegasi ke akun suspended/revoked, dan delegasi yang menciptakan konflik kepentingan dilarang.
+- Delegasi dapat ditetapkan sebelumnya untuk rentang tanggal atau pada active step. Untuk active step, sistem mencatat siapa delegator dan delegate; tindakan delegate dicatat atas identitas delegate dengan relasi delegasi.
+- Reassignment bukan delegation. Reassignment membatalkan assignment lama, menetapkan approver baru setelah validasi, mencatat alasan, dan memberi notifikasi kepada pihak terdampak. Perubahan approver tidak menghapus event terdahulu.
+- Company Super Admin dapat melakukan reassignment dalam guardrail tenant; approver tidak dapat mengganti dirinya sendiri tanpa permission/policy yang mengizinkan.
+
+## 20. Personal Workspace: lifecycle, recovery, export, retention, deletion
+
+Personal Workspace adalah ruang kerja milik satu User Identity. Kebijakan ini tidak mengubah Company Workspace, Company Membership, tenant-owned resources, atau histori tindakan perusahaan.
+
+### 20.1 Kepemilikan dan batas data
+
+- Setiap Personal Workspace dimiliki satu auth.users.id; tidak ada akses kolaboratif pada baseline.
+- Personal project, dokumen, lampiran, dan aktivitas personal tidak otomatis dapat dibaca perusahaan tempat user bekerja.
+- Bergabung/keluar dari perusahaan tidak memindahkan, menggabungkan, atau menghapus data personal.
+- Data perusahaan yang dibuat oleh user tetap milik tenant dan tunduk pada retention perusahaan meskipun user menghapus akun personal atau keluar dari perusahaan. Actor historis dipseudonimkan bila perlu, bukan menghapus audit event.
+- Transfer personal-to-company hanya melalui export/import atau copy eksplisit dengan persetujuan pemilik, konfirmasi tenant tujuan, pemeriksaan klasifikasi, dan audit; tidak ada transfer ownership otomatis.
+
+### 20.2 Retention default
+
+- Data Personal Workspace aktif dipertahankan selama akun aktif atau sampai pemilik menghapusnya.
+- Akun tidak dihapus otomatis hanya karena tidak aktif. Setelah 12 bulan tidak aktif, sistem boleh mengirim pengingat keamanan/aktivitas; setelah 24 bulan dapat mengirim pengingat kedua dan meminta konfirmasi, tetapi penghapusan tetap memerlukan kebijakan eksplisit dan pemberitahuan yang memadai.
+- Item yang diarsipkan tetap dimiliki user dan dipertahankan sampai user menghapusnya atau menghapus akun sesuai proses.
+- Soft-deleted personal resources masuk masa pemulihan **30 hari**, kemudian dihapus permanen dari database aktif dan storage utama, kecuali legal hold atau kewajiban keamanan yang terdokumentasi.
+- Backup terenkripsi yang immutable dapat menyimpan salinan terhapus sampai siklus rotasi maksimum **90 hari**; data tidak dipulihkan ke aplikasi aktif kecuali proses disaster recovery dan tombstone deletion diterapkan kembali.
+- Retensi dokumen/log minimum yang diwajibkan untuk keamanan, pencegahan penyalahgunaan, sengketa, atau kewajiban hukum dapat dipisahkan, diminimalkan, dibatasi akses, dan dijelaskan dalam privacy notice.
+
+### 20.3 Recovery dan pemulihan
+
+- Recovery akun dimulai melalui provider autentikasi (Google/email) atau prosedur account recovery resmi dengan bukti kontrol yang memadai. Support tidak boleh meminta password, OTP, recovery code, atau token.
+- Jika faktor autentikasi hilang, gunakan recovery codes sekali pakai atau prosedur verifikasi alternatif yang ditetapkan Platform; seluruh reset faktor diaudit.
+- Pemulihan item yang dihapus dapat dilakukan pemilik dalam grace period 30 hari. Setelah purge final, pemulihan individual tidak dijanjikan; hanya backup/disaster recovery sesuai prosedur.
+- Jika akun dinonaktifkan karena dugaan kompromi, sesi dicabut dan pemilik harus menyelesaikan verifikasi sebelum akses dipulihkan.
+
+### 20.4 Export dan portability
+
+- Pemilik dapat meminta export data personal dari Account Settings/Data Management.
+- Export mencakup data personal yang dimiliki: metadata proyek, progres, lampiran/dokumen milik sendiri, serta histori aktivitas yang boleh diekspor. Tidak mencakup data tenant, data pengguna lain, secret, token, atau data pihak ketiga yang tidak berhak dibawa.
+- Format baseline: JSON/CSV untuk data terstruktur dan file asli untuk lampiran; disediakan sebagai arsip terenkripsi atau tautan unduh sementara yang memerlukan autentikasi ulang.
+- Link export berlaku maksimal 7 hari, satu pemilik, tidak publik, dan setiap permintaan/unduhan dicatat. Target pemenuhan standar maksimal 7 hari kalender; permintaan besar dapat diberi estimasi baru.
+- Export tidak menghapus sumber data dan tidak memberikan akses ke data perusahaan.
+
+### 20.5 Deletion dan penutupan akun
+
+- Pemilik mengajukan deletion request dengan reauthentication dan konfirmasi dampak. Sistem menjelaskan bahwa data tenant dan audit perusahaan tidak ikut terhapus.
+- Akun masuk status DELETION_PENDING, sesi dicabut, login dinonaktifkan, dan masa pembatalan **30 hari kalender** dimulai. Pemilik dapat membatalkan dengan autentikasi ulang selama grace period.
+- Setelah 30 hari, sistem menghapus/pseudonimkan data personal dari database aktif dan storage utama sesuai data map. Backup mengikuti batas maksimum 90 hari. Pengecualian legal/security hold dicatat dengan alasan, data minimum, pemilik keputusan, dan tanggal review.
+- Sebelum deletion final, pengguna dapat mengunduh export. Akun yang masih memegang Company Super Admin seat atau kewenangan aktif harus menyelesaikan transfer/revocation terlebih dahulu.
+- Penghapusan User Identity tidak boleh menghapus atau merusak transaksi, dokumen, approval, atau audit milik tenant. Foreign key historis menggunakan tombstone/pseudonymous actor reference sesuai kebutuhan audit.
+- Setelah purge selesai, identitas autentikasi dihapus sesuai dukungan provider; identifier minimum yang diperlukan untuk mencegah penyalahgunaan/duplikasi hanya boleh dipertahankan dengan dasar, masa retensi, dan akses yang terdokumentasi.
+
+## 21. Existing implementation audit baseline dan aturan migrasi
+
+Bagian ini mencatat temuan audit implementasi terhadap SSOT lama (v2.3) yang diberikan dalam percakapan pada 2026-11-14. Ini adalah **baseline temuan historis**, bukan hasil audit ulang terhadap HEAD saat ini dan bukan bukti bahwa kondisi tersebut masih persis sama. Sebelum perubahan kode/database/deployment, lakukan re-audit terhadap repository, Supabase Auth, migrations, RLS, RPC, Storage, frontend dan test.
+
+### 21.1 Ringkasan kondisi historis
+
+Audit lama melaporkan:
+- Fondasi tersedia/sebagian: Supabase User Identity, Personal Workspace owner-only, Personal Projects CRUD/RLS, Company/Tenant structure, Company Onboarding approval, Company Membership dasar, Platform Super Admin dasar, Company Super Admin seat constraint, RFIN-A foundation, RFIN-B dasar, dan Unified Audit sebagian.
+- Belum lengkap/teruji: multi-company, multi-persona, RBAC, ABAC, ReBAC, Employee Record, Authority Policy, Company Console, serial Workflow, Final Signatory, tenant isolation operasional, dan RFIN-B access configuration.
+- Risiko kritis yang dilaporkan: akses publik QR/dokumen, policy read authenticated yang terlalu permisif, Workspace Switcher yang hanya client-side, tenant isolation legacy/global, dan validasi Platform Owner.
+- Risiko tambahan: rate limit RFIN belum berbasis IP/device, permission admin RFIN belum granular, leaked-password protection Supabase Auth belum aktif, enam fungsi SECURITY DEFINER legacy belum diaudit mendalam, dan audit trail terpisah.
+
+### 21.2 P0 yang harus diaudit dan ditangani terlebih dahulu
+
+1. **QR/dokumen publik:** audit documents_public_verify, documents_read_authenticated, signatures_read_authenticated, Storage policies, signed/public URLs, QR routes dan metadata. Tutup akses anonim terhadap dokumen/TTE/QR privat; terapkan verifikasi autentikasi, permission document.qr.scan/document.qr.verify, tenant dan scope. Jangan mengungkap keberadaan dokumen lintas tenant.
+2. **Active Context Resolver:** jangan percaya localStorage, workspace_id, company_id, persona_id, atau permission snapshot dari client. Server resolve user, tenant, membership, persona, role, permission, project/resource scope, authority, status dan session.
+3. **Company registration/NPWP:** cocokkan schema aktual dengan keputusan v3.0. Enkripsi NPWP, key management, masking, access controls, duplicate checks, unique constraint, redaction logs, declaration/version, dan lifecycle application/provisioning harus diverifikasi. Tidak menambahkan persyaratan legal/KYC yang belum diputuskan.
+4. **Platform Owner:** validasi identitas provider terverifikasi terhadap email bootstrap yang ditetapkan, gunakan stable auth.users.id, prosedur recovery/transfer terlindungi, dan audit tindakan sensitif.
+5. **Tenant isolation:** petakan seluruh tabel, view, RPC, SECURITY DEFINER, Storage bucket/policy, edge function, dan modul legacy; buktikan cross-tenant deny dengan negative tests.
+
+### 21.3 Temuan implementasi lanjutan
+
+- **Membership administration:** Company Super Admin perlu RPC/service tenant-scoped untuk read/manage anggota tanpa membuka SELECT global membership ke semua authenticated users.
+- **RFIN-B:** audit invitation binding, snapshot akses, one-time redemption atomik, expiry/revoke, recipient verification, rate limit akun/IP/device, dan audit.
+- **Authorization engine:** migrasikan bertahap dari role legacy ke RBAC + ABAC + ReBAC; pertahankan kompatibilitas sampai modul diuji. ACL hanya pengecualian terkontrol.
+- **Employee Record:** jangan mengonversi project_personnel menjadi Auth User otomatis; Employee Record terkait membership dan use case, bukan identitas login.
+- **Workflow/final signatory:** implementasi serial active-step gating, SLA, delegasi, reassign, immutable event, final signatory appointment dan QR privat.
+- **Unified Audit:** satukan konteks actor/tenant/persona/project/resource/action/result/reason; backend menentukan asal/tujuan context switch. Jangan simpan password, token, plaintext RFIN atau secret.
+- **Legacy SECURITY DEFINER:** audit khusus enam fungsi create_boq_addition, current_user_role, record_cash_mutation, record_inventory_mutation, record_inventory_mutation_v2, reverse_inventory_transaction; jangan ubah terburu-buru, lakukan regression tests BOQ/inventory/cash.
+- **Auth security:** tinjau rate limits per akun/IP/device, brute-force/credential stuffing, leaked-password protection, session revocation, recovery dan MFA policy.
+
+### 21.4 Legacy data dan migrasi
+
+Pertahankan keputusan historis berikut sampai ownership diputuskan eksplisit:
+- CV Menara Megah tidak otomatis menjadi Company Workspace.
+- PT IMK tidak otomatis menjadi tenant kedua.
+- Data BOQ, stok, kas, progres, K3 dan dokumen legacy tidak dipindahkan tanpa kesepakatan ownership/scope.
+- project_personnel bukan User Identity dan tidak dikonversi otomatis menjadi Auth User.
+- Migrasi schema sebisa mungkin additive, mempunyai backup, rollback plan, data reconciliation, positive/negative tests, cross-tenant tests, dan regression tests.
+
+### 21.5 Urutan implementasi berdasarkan dependensi
+
+| Fase | Pekerjaan | Prioritas |
+|---|---|---|
+| 0 | Tutup jalur publik QR/dokumen dan audit Storage/RPC | P0 |
+| 1 | Active Context Resolver, tenant isolation, Platform Owner verification | P0 |
+| 2 | Company registration, NPWP protection, provisioning claim lifecycle | P0 |
+| 3 | Membership administration dan RFIN-B access configuration | P1 |
+| 4 | Persona, RBAC, permission catalog, ABAC/ReBAC enforcement | P1 |
+| 5 | Employee Record (conditional) dan project membership/scope | P1 |
+| 6 | Authority policy dan assignment | P1 |
+| 7 | Workflow serial, SLA, delegation dan escalation | P1 |
+| 8 | Final Signatory dan TTE/QR privat | P1 |
+| 9 | Unified Audit Trail dan Company Console | P1/P2 |
+| 10 | Personal data lifecycle/export/recovery/deletion | P2 |
+| 11 | Growth Journey dan fitur lanjutan | P3 |
+
+Setiap fase wajib memiliki migration, backend enforcement, RLS, positive/negative tests, cross-tenant/cross-project tests, legacy regression, documentation, backup dan rollback. Deployment hanya setelah pemeriksaan dan approval perubahan yang sesuai.
+
+## 22. Keputusan v3.0 dan hal yang tetap memerlukan spesifikasi lanjutan
+
+Keputusan normatif yang kini ditetapkan:
+- A2F/MFA adalah fitur platform opsional yang dapat diaktifkan tenant dalam katalog dan guardrail Platform.
+- Company Application, tenant provisioning, dan Company Super Admin signup/claim adalah proses terpisah; keputusan Platform mendahului signup/claim pemegang kursi.
+- RFIN-B diterbitkan setelah penerima dan konfigurasi akses disiapkan; redemption mengikat identitas terverifikasi, membuat membership, dan menerapkan snapshot akses secara atomik.
+- Baseline permission konvensional per modul/action ditetapkan pada Bagian 18.
+- Workflow contract, SLA default, delegation, reassignment dan escalation ditetapkan pada Bagian 19.
+- Personal Workspace retention, recovery, export dan deletion baseline ditetapkan pada Bagian 20.
+- Audit implementasi v2.3 dipertahankan sebagai temuan historis untuk re-audit, bukan dianggap sebagai kondisi HEAD terkini.
+
+Hal yang masih memerlukan spesifikasi teknis sebelum implementasi (bukan keputusan bisnis yang dibiarkan ambigu):
+- Mapping permission baseline ke setiap tabel/API/RPC aktual dan katalog final granular per modul.
+- Schema database final, indeks, constraint, trigger, RPC names/payloads, error schema, dan cache invalidation.
+- Kalender hari libur, SLA khusus tiap workflow, batas transaksi dan authority per tenant.
+- Provider MFA yang benar-benar tersedia pada deployment dan cara memvalidasi assurance signal.
+- Data map final, backup architecture, legal hold, privacy notice dan retensi legal sesuai yurisdiksi.
+- Migrasi legacy dan acceptance tests per modul berdasarkan audit ulang.
+
+### Versi 3.0 — 2026-11-14
+- Menetapkan A2F/MFA sebagai fitur opsional dari katalog Platform yang dapat diaktifkan tenant, bukan persyaratan universal; membedakan Google OAuth sebagai sign-in dari faktor kedua.
+- Memisahkan Company Application, provisioning tenant, dan signup/claim baru Company Super Admin yang memerlukan persetujuan Platform.
+- Menetapkan alur RFIN-B berbasis invitee, konfigurasi akses sebelum issuance, Effective Access Preview, email binding, signup/sign-in, redemption atomik, dan lifecycle Invitation/Membership yang terpisah.
+- Menambahkan baseline matriks permission untuk aplikasi bisnis konvensional dan prinsip least privilege/non-destructive correction.
+- Menambahkan kontrak Workflow Engine, SLA default, reminder/escalation, delegation, reassignment, concurrency, dan audit.
+- Menetapkan lifecycle Personal Workspace untuk retention, recovery, export, deletion, serta pemisahan data personal dan tenant.
+- Memasukkan audit v2.3 sebagai baseline historis yang wajib diverifikasi ulang, bukan klaim kondisi implementasi terkini.
+
+
 ### Versi 2.7 — 2026-11-14
 - Autentikasi Company Super Admin diperjelas: sign-up melalui email/Google; sign-in menggunakan NPWP + kata sandi. Sesi dipetakan ke User Identity internal dan tenant yang benar. Kontrol password hashing, rate limiting, proteksi brute-force, reset/recovery, dan audit diwajibkan.
+
+### Versi 3.0 — 2026-11-14
+- Finalisasi keputusan bisnis dan spesifikasi normatif tambahan sebagaimana Bagian 17–22.
 
 ### Versi 2.6 — 2026-11-14
 - Company Identity Registration menggunakan NPWP + Google; status PENDING sampai Platform Super Admin memutuskan ACCEPTED/REJECTED. Review bukan verifikasi legal independen/KYC; identitas pemohon terpisah dan dokumen legal bukan syarat standar.
