@@ -1,11 +1,20 @@
 # Workspace Migration Update — 13 November 2026
 
+## Business naming and ownership clarification — 14 November 2026
+- Proyek Cair adalah nama platform, bukan nama tenant atau proyek operasional.
+- UDU adalah proyek operasional di dalam Company Workspace tenant CV Menara Megah.
+- CV Menara Megah adalah Company/Tenant owner untuk proyek UDU.
+- PT IMK adalah client/pemberi kerja CV Menara Megah, bukan tenant kedua. Penyebutan IMK pada BOQ/material hanya menjelaskan tanggungan/supply responsibility item tertentu.
+- Company Super Admin CV Menara Megah mengelola akses pengguna melalui Proyek Cair Console: view/read, CRUD, workflow/review/approval, TTE/QR signing, dan QR scan/verification sesuai permission dan scope.
+- Klarifikasi ini adalah keputusan bisnis; snapshot database belum menunjukkan Company/Company Workspace/Membership yang diprovisioning dan tidak mengubah data legacy.
+
 ## Identity mapping
 - `islamiahiis243@gmail.com`: Platform Super Admin, provisioned in `public.platform_admins`.
 - `sumarlin.1103@gmail.com`: General User / Option B; normal Supabase Auth identity with Personal Workspace. This identity is not automatically a Company Super Admin and is not assigned a company membership.
-- CV Menara Megah is treated as the General User / Option B represented by `sumarlin.1103@gmail.com`, not as a Company Workspace or Company Super Admin tenant.
-- In the legacy project, PT IMK is the client responsible for supplying the specified items. A zero nominal means Menara Megah does not invoice those client-supplied items. This is a project commercial/supply note, not evidence of a second tenant or a reason to split project ownership.
-- The legacy project remains a single operational project under its existing legacy scope until explicit workspace/project ownership is migrated. No historical BOQ, stock, cash, progress, K3, or document rows were reassigned.
+- `sumarlin.1103@gmail.com` remains an individual User Identity / General User (Option B) in the historical snapshot. This identity is not itself the Company/Tenant record and is not automatically a Company Super Admin.
+- The business entity CV Menara Megah is the intended tenant and Company Workspace owner for project UDU. Company registration, Company Workspace provisioning, and Company Super Admin claim must follow the approved onboarding flow; do not infer that they already exist from this historical individual account.
+- In project UDU, PT IMK is the client. Item-level IMK responsibility/supply notes (including zero nominal / not invoiced by Menara Megah) are commercial attributes only; they do not create a PT IMK tenant, Company Workspace, or membership.
+- The legacy operational records correspond to project UDU and target the CV Menara Megah Company Workspace. Existing records remain unmigrated until official tenant/workspace provisioning, canonical Project Registry design, row-level mapping, and migration gates are complete. No historical BOQ, stock, cash, progress, K3, or document rows were reassigned.
 
 ## Delivered database foundation
 - Owner-only `personal_projects` CRUD with RLS.
