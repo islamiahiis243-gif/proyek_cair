@@ -34,7 +34,7 @@ Backing up only the database or only the Supabase root key is insufficient for a
 6. Record the custody metadata and date in the organization's restricted operational register. Do not commit backup artifacts to this repository.
 7. Mark the gate complete only after the external backup exists and a controlled retrieval check has succeeded.
 
-**Current state (2026-11-14 19:22 WIB):** Vault metadata confirms the named secret exists. No external key backup was created or verified during this implementation. Therefore the backup gate remains OPEN and real NPWP intake at scale must remain blocked.
+**Current execution status (2026-11-14 20:04 WIB):** Supabase metadata confirms the secret exists, but no external secret-manager connector or authenticated external vault is available in this workspace. No decrypted secret value was retrieved, exported, or copied. GitHub and Vercel project variables are not accepted as the independent dual-custody backup destination. The backup, retrieval verification, second-custodian check, and recovery drill remain NOT DONE.
 
 ## 4. Database restore and project migration
 
