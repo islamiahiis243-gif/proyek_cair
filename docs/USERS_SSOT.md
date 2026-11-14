@@ -2,7 +2,7 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 2.6
+- **Versi:** 2.7
 - **Tanggal:** 2026-11-14
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
@@ -92,7 +92,7 @@ Calon Company/Tenant mengajukan registrasi melalui aplikasi menggunakan NPWP dan
 3. Pengajuan disimpan dengan status `PENDING`; Platform Super Admin menerima notifikasi. Selama belum ada keputusan eksplisit, status tetap `PENDING` dan tenant belum aktif.
 4. Platform Super Admin meninjau deklarasi/informasi yang tersedia dan memutuskan `ACCEPTED` atau `REJECTED`. Tidak ada auto-activation. Alasan keputusan dicatat dalam audit trail. Review bukan verifikasi legal independen, verifikasi pemerintah, atau KYC.
 5. Setelah `ACCEPTED`, sistem membuat/mengaktifkan Company/Tenant dan menyediakan tepat satu kursi Company Super Admin. Penerimaan aplikasi dan aktivasi kursi admin adalah state/proses terpisah.
-6. Company Super Admin memakai alur autentikasi khusus dengan NPWP sebagai Company Lookup/Login Identifier dan faktor kedua dari aplikasi authenticator (A2F, misalnya TOTP atau mekanisme setara). NPWP bukan password/secret dan bukan faktor autentikasi. Credential/faktor pertama, enrollment, recovery, rotasi, rate limit, lockout, serta pemetaan sesi wajib dirancang sebelum implementasi.
+6. Company Super Admin melakukan sign-up menggunakan email atau Google. Setelah sign-up dan provisioning kursi Company Super Admin disetujui, akun ditautkan ke Company/Tenant dan User Identity internal yang stabil (`auth.users.id`). Untuk sign-in berikutnya, Company Super Admin menggunakan NPWP perusahaan sebagai login identifier dan kata sandi sebagai credential rahasia. NPWP bukan kata sandi dan tidak boleh diperlakukan sebagai secret. Sistem memverifikasi pasangan NPWP + kata sandi, lalu memetakan sesi terautentikasi ke User Identity dan tenant yang tepat. Password disimpan hanya dalam bentuk hash menggunakan mekanisme password hashing yang aman; implementasi wajib menyediakan rate limiting, proteksi brute-force/credential stuffing, lockout atau throttling adaptif, reset/recovery aman, dan audit peristiwa autentikasi.
 7. Kursi Company Super Admin tetap terikat pada User Identity internal stabil (`auth.users.id`) untuk relasi dan audit. Login khusus memetakan sesi terverifikasi ke User Identity tersebut; NPWP tidak menggantikan `user_id`.
 8. Platform Super Admin menjalankan provisioning/aktivasi kursi tunggal melalui Platform Administration Engine. RFIN-A dapat dipakai sebagai credential aktivasi satu kali bila diperlukan, tetapi bukan faktor login berulang atau pengganti A2F.
 9. RFIN-A, bila digunakan, memiliki entropy tinggi, expiry, tenant binding, rate limit, redemption atomik satu kali, dan disimpan sebagai hash setelah issuance.
@@ -102,7 +102,7 @@ Istilah resmi credential aktivasi perusahaan adalah **RFIN-A**. RFIN-A bukan cre
 
 **Pemisahan penting:** NPWP mengidentifikasi perusahaan; User Identity personal mengidentifikasi orang yang bertanggung jawab mengoperasikan akun Company Super Admin; kode aktivasi membuktikan hak untuk mengklaim kursi administrator pada proses awal. Ketiganya tidak boleh diperlakukan sebagai satu kredensial bersama.
 
-NPWP bukan password, secret, atau faktor autentikasi. Login khusus Company Super Admin menggunakan NPWP sebagai identifier dan A2F authenticator; credential/faktor pertama serta enrollment/recovery wajib ditentukan melalui desain keamanan sebelum implementasi. Kursi tetap terikat pada User Identity internal. Transfer/recovery melalui Platform Administration Engine dengan review dan audit.
+NPWP merupakan login identifier Company Super Admin, sedangkan kata sandi merupakan credential rahasia untuk sign-in. Email/Google digunakan pada proses sign-up dan pengaitan awal User Identity; bukan berarti NPWP menjadi password. Setelah akun diprovisioning, sign-in menggunakan pasangan NPWP + kata sandi dan sesi harus dipetakan ke `auth.users.id` serta tenant yang tepat. Reset password, pemulihan akun, dan penggantian pemegang kursi dilakukan melalui prosedur aman pada Platform Administration Engine dan wajib diaudit.
 
 #### 3.2.2 ProyekCair Console
 
@@ -1116,9 +1116,12 @@ Isi menu dan widget di bagian ini adalah target arsitektur. Hal-hal berikut belu
 
 Keputusan tersebut harus dituangkan pada katalog permission, frontend-backend contract, database mapping, RLS/authorization matrix, dan test matrix sebelum implementasi.
 
+### Versi 2.7 — 2026-11-14
+- Autentikasi Company Super Admin diperjelas: sign-up melalui email/Google; sign-in menggunakan NPWP + kata sandi. Sesi dipetakan ke User Identity internal dan tenant yang benar. Kontrol password hashing, rate limiting, proteksi brute-force, reset/recovery, dan audit diwajibkan.
+
 ### Versi 2.6 — 2026-11-14
 - Company Identity Registration menggunakan NPWP + Google; status PENDING sampai Platform Super Admin memutuskan ACCEPTED/REJECTED. Review bukan verifikasi legal independen/KYC; identitas pemohon terpisah dan dokumen legal bukan syarat standar.
-- NPWP adalah Company Lookup/Login Identifier khusus Company Super Admin, bukan password/secret. Login khusus memakai A2F authenticator dan tetap terikat User Identity internal; detail faktor pertama, enrollment/recovery, rate limit, dan lockout memerlukan desain keamanan.
+- Sign-up Company Super Admin menggunakan email/Google; sign-in berikutnya menggunakan NPWP + kata sandi. NPWP adalah login identifier, bukan password. Sesi tetap terikat pada User Identity internal dan tenant; password hashing, rate limiting, brute-force protection, reset/recovery, serta audit autentikasi wajib diterapkan.
 - Perubahan field tenant platform-controlled diajukan melalui Console dan Platform Administration Engine.
 - Final signing didasarkan pada User Identity terautentikasi + Company Membership aktif + appointment eksplisit aktif. Employee Record/persona/jabatan/approval level/senioritas/department/authority tambahan bukan prasyarat universal. QR scan/verifikasi terpisah.
 - Mandatory/optional/future organization scope ditegaskan; Organization Structure Builder bukan mandatory.
