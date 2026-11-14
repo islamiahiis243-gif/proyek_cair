@@ -1,6 +1,6 @@
 # UDU Tenant / Project Cutover Readiness
 
-**Snapshot:** Supabase project sjwheagxwpnqckmqxyme, updated 2026-11-14 20:11 WIB
+**Snapshot:** Supabase project sjwheagxwpnqckmqxyme, updated 2026-11-14 20:24 WIB
 **Business baseline:** USERS_SSOT.md v3.1  
 **Status:** ONBOARDING + PROJECT REGISTRY + GUARDED OPERATIONAL RLS FOUNDATION APPLIED; TENANT PROVISIONING, BACKFILL, AND RLS ACTIVATION PENDING
 
@@ -61,6 +61,8 @@ The following production migrations were applied directly; no Supabase staging b
 - `20261114125949_add_guarded_operational_project_rls`
 - `20261114130212_lock_down_scope_control_table_rls`
 - `20261114130400_separate_roster_management_permission`
+- `20261114132014_make_document_qr_verification_private_and_audited`
+- `20261114132316_revoke_anonymous_document_table_privileges`
 
 Implemented:
 - Registration RPC requires NPWP and a separately designated Company Super Admin email.
@@ -111,12 +113,15 @@ Implemented:
 - Added paired nullable `workspace_id` / `project_id` columns, FK/check constraints, and an index to `audit_logs`; existing audit events remain unscoped pending audited backfill.
 - Added restrictive Storage policies for `project-evidence`; after activation, evidence paths must start with the canonical Project UUID.
 - Added a non-mutating readiness report and an activation guard that refuses cutover while operational/audit rows are unscoped, project evidence paths are not Project-prefixed, project.read grants are missing, or legacy SECURITY DEFINER mutation RPCs remain executable by authenticated users.
+- Replaced the anonymous /verify QR path with an AuthGate-protected route. The new RPC requires both document.qr.scan and document.qr.verify for an active project membership, returns only minimal verification metadata, and appends a success/denial event to audit_logs without storing the raw QR token.
+- Revoked anon access to the public_document_verification view and blanket table privileges on documents/document_signatures. The project-evidence Storage bucket is confirmed private.
 - Project-signature INSERT is deliberately denied once the gate is enabled until an SSOT-compliant signatory appointment and authority check exists. Read-only access is still project-scoped.
 
 Verification on live Supabase:
 - All 16 operational tables have RLS enabled and their new restrictive policies installed (80 policies total).
 - The compatibility test with the gate OFF returned the existing 280 BOQ items, 39 sections, 1 project-control row, and 13 roster rows to the authenticated role.
 - A rollback-only transaction temporarily enabled the gate and confirmed that the unscoped rows in those four tables became invisible (0 visible rows); the transaction was rolled back and production gate remains OFF.
+- Verified anon cannot execute verify_private_document_qr, cannot SELECT documents/document_signatures/public_document_verification, and cannot INSERT documents or signatures. Authenticated has EXECUTE on the public invoker wrapper; a call without an authenticated UID returns no rows. There are currently no documents in production, so a positive QR verification has not yet been exercised against a real document.
 - The live readiness report currently finds 280 unscoped BOQ items, 39 unscoped sections, 1 unscoped project_control row, 13 unscoped personnel rows, and 1,107 unscoped audit events. The 12 other operational tables are empty.
 - Five legacy SECURITY DEFINER mutation RPCs are still executable by authenticated users. They must be replaced with project-aware implementations or revoked only after their callers are migrated.
 - No operational row, audit event, user, Company, Workspace, or Project was created, rewritten, or reassigned. No dummy data was used.
@@ -137,7 +142,8 @@ Client relationships intentionally do not reference `companies` or Company Membe
 - Added SQL guardrail tests in supabase/tests/operational_project_scope_guardrails.sql.
 - Updated package.json esbuild devDependency to ^0.28.0 after Vite 8.3.8 dependency resolution exposed a peer mismatch with esbuild 0.25; dependency installation and the production build then passed in an isolated Vercel Sandbox.
 - Production build ran TypeScript noEmit plus Vite production bundling and transformed 1,951 modules. Existing >500 kB chunk-size warning remains. The repository did not contain package-lock.json; install was therefore resolved from package.json, and no lockfile was committed.
-- Latest Vercel production deployment for main commit 0d520cb447e978deb2bf71610a1c136e41fdd8a6 reports READY.
+- Replaced the anonymous QR verification route with private AuthGate + permission-bound RPC; QR scan success/denial is now audited.
+- Latest Vercel deployment for the full SSOT/QR security changes is pending a fresh build verification (see subsequent release record).
 - Updated CHANGELOG.md with implementation, verification results, and remaining gates.
 - Latest Vercel production deployment for the updated main commit reports READY.
 
@@ -154,6 +160,15 @@ Client relationships intentionally do not reference `companies` or Company Membe
 9. Run positive and negative tests with two real canonical Projects and real active memberships (including Company Super Admin without operational grants, unauthorized users, PT IMK non-membership, anonymous QR access, and cross-parent mismatches). Only then call the Platform-Super-Admin-guarded activation RPC.
 10. Verify external key backup/retrieval/recovery and database backup/restore/rollback procedures. No staging branch is required for this execution path; production changes must continue to be additive, explicitly reviewed, and independently verified.
 
-## 7. Release decision
+## 7. Private QR / document verification — implemented, positive production test pending
+
+The legacy route /verify previously bypassed AuthGate and queried a public security-invoker view. SSOT v3.1 §21.2 requires private QR/TTE/document access to be authenticated, permission-bound, tenant/project scoped, and not disclose cross-tenant document existence. The anonymous route was therefore replaced with a private route protected by AuthGate and an invoker RPC backed by a guarded private implementation.
+
+- Both active project permissions `document.qr.scan` and `document.qr.verify` are required; the underlying check uses active Company Membership, active Project Membership, and active permission catalog entries.
+- Successful and denied checks write append-only audit events with actor, document reference when known, project/workspace scope when known, outcome, source, and permission codes; the raw QR token is never stored in the audit event.
+- Anonymous table/view privileges are revoked; the anonymous `documents_public_verify` policy is dropped; anonymous access to the private project-evidence bucket remains denied.
+- Current production has zero documents and zero canonical Projects, so the negative/authorization surface is verified, but a positive verification with a real project/member/document must wait for onboarding and project provisioning.
+
+## 8. Release decision
 
 **NOT READY for tenant provisioning and operational cutover.** The Company Registration/claim lifecycle and Project Registry foundation have been applied and verified. CV Menara Megah has not yet been registered or accepted, no Company Super Admin has claimed the seat, UDU/PT IMK canonical records do not yet exist, and legacy data/audit backfill remains incomplete, the RLS enforcement gate remains OFF, front-end active-project context and RPC/storage/signatory cutover remain incomplete, and external NPWP key escrow/recovery is not verified.
