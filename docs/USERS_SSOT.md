@@ -2,8 +2,8 @@
 # UDU / Proyek Cair — Identity, Persona, Membership & Authorization SSOT
 
 - **Status:** Target architecture / Single Source of Truth (SSOT)
-- **Versi:** 2.3
-- **Tanggal:** 2026-11-13
+- **Versi:** 2.5
+- **Tanggal:** 2026-11-14
 - **Cakupan:** Identitas pengguna, perusahaan (tenant), keanggotaan, undangan, persona, role, permission, authority, project scope, dan audit.
 - **Catatan implementasi:** Dokumen ini menetapkan rancangan dan aturan bisnis yang disepakati. Dokumen ini **bukan bukti bahwa seluruh skema atau alur sudah diterapkan** pada aplikasi atau database saat ini. Implementasi wajib diawali audit terhadap kode, Supabase Auth, skema database, RLS, dan alur aplikasi yang sudah ada.
 
@@ -48,7 +48,7 @@ Istilah berikut harus digunakan secara konsisten dalam kode, database, API, UI, 
 | **Invitation** | Undangan yang dibuat oleh pihak berwenang agar identitas dapat bergabung ke perusahaan dan menerima persona/role tertentu. |
 | **Platform Super Admin** | Pemilik/pengelola tertinggi platform UDU, dengan otoritas lintas tenant sesuai kebijakan platform. |
 | **Company Super Admin** | Administrator tertinggi pada satu perusahaan, terbatas pada tenant perusahaannya sendiri. |
-| **Pihak Terkait (penunjukan kewenangan)** | User Identity yang telah memiliki Company Membership aktif dan Employee Record pada perusahaan yang menunjuknya, lalu secara eksplisit ditetapkan Company Super Admin sebagai pihak yang berwenang melakukan TTE/pengesahan QR untuk dokumen dan scope tertentu. Penunjukan harus terkait persona, authority, dan masa berlaku yang sah. Pihak eksternal tanpa akun ProyekCair atau tanpa membership pada perusahaan tersebut tidak dapat menjadi final signatory. |
+| **Pihak Terkait (penunjukan kewenangan)** | User Identity yang memiliki Company Membership aktif pada perusahaan yang menunjuknya dan didaftarkan sebagai anggota oleh Company Super Admin, lalu ditunjuk perusahaan sebagai final signatory untuk dokumen/scope terkait. ProyekCair tidak mensyaratkan jabatan, senioritas, KTP/NIK, atau Employee Record terpisah secara universal; tanggung jawab pemeriksaan identitas dan kelayakan internal ada pada perusahaan. |
 | **Orang Terkait (relasi orang–perusahaan)** | Catatan hubungan seseorang dengan perusahaan dalam kapasitas legal, kepemilikan, pengendalian, atau manfaat, misalnya pendiri, direktur/CEO, pemegang saham, atau penerima manfaat (*beneficial owner*). Orang tersebut dapat sama sekali tidak mengetahui, menggunakan, atau memiliki akun di ProyekCair; pencatatannya tidak mensyaratkan User Identity, login, membership, persona, atau aktivitas di aplikasi. Konsep ini berbeda dari penunjukan Pihak Terkait sebagai penandatangan. Fitur ini belum termasuk cakupan implementasi saat ini. |
 | **RFIN** | Keluarga credential aktivasi/undangan internal ProyekCair yang dibedakan menjadi RFIN-A dan RFIN-B berdasarkan penerbit, penerima, serta tujuan penggunaannya. RFIN bukan password login, bukan NPWP, dan bukan pengganti autentikasi User Identity. |\n| **RFIN-A** | Credential aktivasi awal yang diterbitkan oleh Platform Super Admin kepada perusahaan untuk mengklaim/mengaktifkan satu kursi Company Super Admin pada proses signup/provisioning perusahaan. |\n| **RFIN-B** | Credential undangan yang diterbitkan oleh Company Super Admin kepada user/karyawan perusahaan yang diundang untuk signup dan mengaktifkan Company Membership serta akses awal sesuai konfigurasi undangan. |\n| **RFIN Engine** | Komponen khusus untuk provisioning, pengelolaan, validasi, pencabutan, dan pemeriksaan penggunaan RFIN-A maupun RFIN-B secara aman, tenant-isolated, dan teraudit; kedua jenis credential wajib memiliki alur dan policy terpisah. |\n| **TTE/QR Privat** | Mekanisme pengesahan/tanda tangan elektronik internal ProyekCair yang akses, tindakan, dan verifikasinya dibatasi untuk pengguna berwenang dalam tenant/scope terkait; bukan layanan verifikasi publik. |\n| **Audit Trail** | Catatan append-only atas aktivitas dan perubahan penting yang dapat ditelusuri. |
 
@@ -118,9 +118,9 @@ Rute UI yang disarankan (bukan kontrak URL permanen):
 | **Dashboard Perusahaan** | Ringkasan pengguna/karyawan, proyek, aktivitas barang dan keuangan, antrean pemeriksaan/persetujuan, dokumen tertunda, dan aktivitas yang perlu ditinjau. |
 | **Profil Perusahaan** | Identitas perusahaan, NPWP, informasi legal, alamat, kontak, status verifikasi, dan riwayat perubahan profil. |
 | **Manajemen Pengguna** | Daftar pengguna, undangan, status akun/membership, persona, dan riwayat keanggotaan. |
-| **Manajemen Kepegawaian** | Daftar karyawan, employee_number, status kepegawaian, riwayat jabatan, mutasi, departemen, dan penempatan proyek. |
-| **Struktur Organisasi** | Struktur Head Office, departemen/unit, struktur proyek lapangan, jabatan struktural, atasan langsung, dan riwayat perubahan organisasi. |
-| **Jabatan, Role & Wewenang** | Katalog jabatan, persona, role, permission, matriks wewenang, batas persetujuan, dan penugasan proyek. |
+| **Profil Anggota / Employee Record** | Data minimum pengguna perusahaan yang memang memerlukan record kepegawaian untuk penugasan operasional, CRUD tertentu, atau TTE/QR; employee_number bila digunakan. Bukan daftar seluruh karyawan. |
+| **Penugasan Individu** | Penetapan persona, role/permission, level/label jabatan atau approval, authority, project scope, dan masa berlaku per anggota tanpa mewajibkan bagan organisasi, departemen, divisi, atau relasi atasan-bawahan. |
+| **Persona, Role, Permission & Authority** | Pemilihan preset dan penyesuaian assignment per anggota; ringkasan effective access, batas kewenangan, project scope, dan masa berlaku. |
 | **Pengawasan Operasional** | Penelusuran aktivitas barang, keuangan, progres, K3, dokumen, serta pemeriksaan dan persetujuan berjenjang. |
 | **Workflow & Persetujuan** | Konfigurasi alur review/approval berdasarkan jenis proses, proyek, departemen, nominal, jabatan, dan authority dalam guardrail platform. |
 | **Audit & Riwayat Aktivitas** | Pencarian audit lintas modul: CRUD, import/export, pemeriksaan, persetujuan, perubahan akses, login/sesi, dan perubahan data penting. |
@@ -201,14 +201,17 @@ Perusahaan dapat memiliki administrator dengan kewenangan lebih terbatas, misaln
 
 ## 4. Identitas perusahaan dan NPWP
 
+Registrasi Company pada produk ini diposisikan sebagai **Company Identity Registration**, bukan layanan pemerintah atau pernyataan bahwa ProyekCair telah mengesahkan status hukum perusahaan. ProyekCair bukan otoritas pemerintah dan tidak boleh mengklaim telah melakukan verifikasi legal independen bila pemeriksaan independen tersebut tidak benar-benar dilakukan.
+
 - Setiap Company memiliki identitas internal yang stabil (misalnya UUID) sebagai primary key.
-- NPWP merupakan identifier bisnis/legal perusahaan dan dapat digunakan untuk pencarian, registrasi, pencocokan, serta verifikasi perusahaan.
-- NPWP **bukan password, secret, atau bukti autentikasi pengguna**.
-- Login pengguna tetap menggunakan Google/email melalui authentication provider.
-- NPWP harus dinormalisasi dan divalidasi sesuai aturan yang berlaku sebelum disimpan/digunakan sebagai identifier.
-- Terapkan unique constraint pada nilai NPWP yang telah dinormalisasi, dengan penanganan yang tepat untuk perubahan format atau data registrasi.
-- Simpan data perusahaan seperlunya, lindungi data sensitif, dan catat perubahan identitas legal.
-- Status verifikasi perusahaan harus dibedakan dari status keanggotaan pengguna. Pengguna tidak otomatis menjadi anggota hanya karena mengetahui NPWP perusahaan.
+- Data minimum registrasi perusahaan yang disepakati: nama perusahaan, NPWP, business email/alamat email kontak perusahaan, identitas pemohon/penanggung jawab, serta pernyataan bahwa pemohon berwenang mengajukan dan data yang disampaikan benar.
+- NPWP menjadi identifier perusahaan yang dideklarasikan pemohon untuk pencatatan, pencarian, dan pencegahan duplikasi. Penggunaan NPWP pada registrasi tidak dengan sendirinya membuktikan keabsahan badan hukum, kepemilikan, atau kewenangan pemohon.
+- ProyekCair tidak mewajibkan akta pendirian atau dokumen legal pemerintah lain sebagai prasyarat standar registrasi dalam model ini. Pemeriksaan tambahan hanya boleh diberlakukan bila kebijakan platform secara eksplisit menetapkannya dan tidak boleh disebut sebagai verifikasi pemerintah.
+- Status identitas perusahaan harus membedakan data yang **dideklarasikan pemohon**, pemeriksaan format/kelengkapan, pemeriksaan duplikasi, dan verifikasi independen (jika suatu saat benar-benar dilakukan). Jangan menampilkan label “terverifikasi legal” hanya karena NPWP telah diisi atau formatnya lolos validasi.
+- NPWP **bukan password, secret, atau bukti autentikasi pengguna**. Login pengguna tetap menggunakan Google/email melalui authentication provider.
+- NPWP harus dinormalisasi dan divalidasi formatnya sebelum disimpan/digunakan sebagai identifier. Terapkan unique constraint pada nilai NPWP yang telah dinormalisasi, dengan penanganan perubahan format atau data registrasi.
+- NPWP termasuk data sensitif bisnis: batasi akses, enkripsi sesuai klasifikasi, minimalkan tampilan (misalnya masked value), jangan masukkan nilai penuh ke log, dan catat akses/perubahan yang relevan.
+- Status Company Identity Registration harus dibedakan dari status keanggotaan pengguna. Pengguna tidak otomatis menjadi anggota hanya karena mengetahui NPWP perusahaan.
 
 ## 4.1 Identitas kepegawaian dan employee_number
 
@@ -229,9 +232,15 @@ Employee Record **tidak dibuat untuk seluruh daftar karyawan perusahaan**. Emplo
 
 Relasi antartabel menggunakan UUID internal, bukan employee_number sebagai foreign key. Satu user_id dapat terhubung ke beberapa Employee Record melalui Company Membership berbeda.
 
-## 5.1 Struktur organisasi, departemen, dan jabatan
+## 5.1 Jabatan, label approval, dan penugasan individu
 
-Struktur organisasi adalah model tersendiri dan tidak boleh disamakan dengan persona atau role aplikasi. Satu perusahaan dapat memiliki struktur Head Office dan struktur proyek lapangan yang berbeda.
+ProyekCair **tidak mewajibkan Organization Structure Builder**, struktur departemen/divisi, bagan organisasi, atau relasi atasan-bawahan sebagai prasyarat penggunaan. Perusahaan memiliki cara organisasi yang berbeda-beda; pemodelan struktur organisasi lengkap menambah kompleksitas dan bukan kebutuhan inti otorisasi pada tahap ini.
+
+Perusahaan dapat menetapkan penugasan per individu secara langsung: persona, role/permission, label jabatan atau approval level, authority, project scope, dan masa berlaku. Label jabatan/level dapat dipilih dari preset platform lalu disesuaikan dengan istilah internal perusahaan. Preset tidak otomatis memberikan permission, authority, atau akses proyek.
+
+Contoh tingkatan/preset yang dapat disediakan katalog platform (bukan urutan wajib dan bukan pemberian hak otomatis): Staff, Foreman, Supervisor, Superintendent, Assistant Manager, Manager, General Manager, KTT/Project Manager, Director, dan CEO. Perusahaan dapat memakai label yang relevan, mengganti nama, atau menambahkan label internal. Setiap keputusan tetap dievaluasi berdasarkan assignment dan policy yang konkret.
+
+Struktur organisasi lengkap dapat dipertimbangkan sebagai fitur opsional di masa depan melalui keputusan cakupan terpisah; ia tidak menjadi dependensi untuk membership, project scope, workflow, authority, atau TTE/QR.
 
 Contoh struktur proyek lapangan (template, bukan keharusan):
 ```text
@@ -286,27 +295,27 @@ Worker / Foreman
 
 Tahap dapat berupa draft, submit, review, verify, approve, reject, return for revision, resubmit, dan close. Tidak semua proses harus melewati semua jabatan. Head Office dapat memiliki approval chain berbeda. Workflow harus memeriksa penugasan organisasi dan authority saat tindakan dilakukan; jabatan saja tidak cukup.
 
-Setiap workflow instance dan step memiliki ID internal auto-generated. Setiap keputusan tahap menyimpan aktor, user_id, company_id, employee_id, employee_number saat itu (jika tersedia), persona aktif, snapshot jabatan/position, departemen, proyek, tindakan, waktu, catatan/alasan, hasil, SLA/due date, dan referensi dokumen/transaksi. Pengulangan tahap menghasilkan event baru; histori tahap sebelumnya tidak ditimpa. Tahap approval bersifat serial; akses melihat dapat diberikan lebih awal secara paralel, tetapi tombol/tindakan approval hanya aktif pada tahap yang sedang berjalan.
+Setiap workflow instance dan step memiliki ID internal auto-generated. Setiap keputusan tahap menyimpan aktor, user_id, company_id, employee_id, employee_number saat itu (jika tersedia), persona aktif, snapshot jabatan/position, departemen, proyek, tindakan, waktu, catatan/alasan, hasil, SLA/due date, dan referensi dokumen/transaksi. Pengulangan tahap menghasilkan event baru; histori tahap sebelumnya tidak ditimpa. Tahap approval dan eksekusinya bersifat serial; **notifikasi kepada seluruh approver yang tercantum dalam rangkaian dapat dikirim secara paralel sejak workflow dimulai** agar mereka dapat saling mengingatkan dan mempersiapkan pemeriksaan. Notifikasi paralel tidak mengubah urutan eksekusi, status aktif, atau hak bertindak.
 
 Contoh kategori workflow: laporan progres harian/mingguan, permintaan dan pengeluaran material, transaksi keuangan/pengajuan pembayaran, laporan K3, dokumen resmi, dan perubahan BOQ. Workflow Builder harus dibatasi katalog permission dan guardrail platform.
 
 ### 5.2.1 Persetujuan berurutan, penandatangan akhir, dan QR
 
-Persetujuan dokumen/data mengikuti **alur serial (berurutan)** berdasarkan tangga/hierarki organisasi dan aturan workflow yang berlaku. Persetujuan paralel untuk beberapa tahap/pejabat pada satu rantai approval tidak diperbolehkan. Pengguna yang berada pada tahap berikutnya boleh melihat dokumen/data secara paralel (read-only sesuai akses), tetapi tindakan persetujuan hanya dibuka ketika giliran tahapnya aktif dan seluruh tahap sebelumnya telah selesai.
+Persetujuan dokumen/data mengikuti **alur eksekusi serial (berurutan)** berdasarkan urutan approver yang ditentukan untuk dokumen tersebut dan aturan workflow yang berlaku. Eksekusi approval paralel tidak diperbolehkan. **Notifikasi kepada semua approver dalam rangkaian dikirim secara paralel** agar mereka mengetahui adanya dokumen dan dapat saling mengingatkan; notifikasi bukan aktivasi hak approval. Pengguna pada tahap berikutnya dapat melihat dokumen secara read-only sesuai akses, tetapi tindakan persetujuan hanya dibuka ketika gilirannya aktif dan seluruh tahap sebelumnya selesai.
 
-- Setiap tahap yang diwajibkan harus ditindaklanjuti satu per satu sesuai urutan workflow, misalnya Foreman/Worker → Supervisor → Superintendent → Manager/KTT/Project Manager. Rantai Head Office dapat berbeda sesuai struktur dan kebijakan perusahaan.
-- Data identitas final signatory yang wajib disimpan dan diverifikasi mencakup data KTP (NIK dan informasi identitas yang diperlukan), alamat sesuai KTP, alamat domisili, nomor telepon, serta email aktif. Data tersebut hanya boleh diakses oleh pihak yang berwenang, dilindungi sesuai klasifikasi data pribadi, dan tidak boleh ditampilkan berlebihan pada dokumen/QR publik.
-- Email dan kanal notifikasi yang terdaftar digunakan untuk pemberitahuan di luar aplikasi, termasuk pemberitahuan bahwa pengguna diminta menandatangani dokumen tertentu, dokumen yang telah ditandatangani kemudian dibatalkan, atau perubahan status penting lainnya. Notifikasi harus memuat referensi dokumen dan instruksi untuk meninjau konteks/riwayatnya; jangan mengirim data pribadi atau isi dokumen sensitif secara berlebihan.
+- Setiap tahap yang diwajibkan harus ditindaklanjuti satu per satu sesuai urutan yang dipilih untuk dokumen tersebut. Pembuat/pengaju dokumen dapat menetapkan rangkaian approver dan jumlah tahap yang diperlukan (misalnya dua atau empat orang) sesuai proses perusahaan; template workflow boleh disediakan untuk mempercepat pemilihan. Urutan yang dipilih tidak boleh melewati validasi membership, permission, authority, project/resource scope, status aktif, dan aturan dokumen. Tidak ada keharusan membangun bagan organisasi terlebih dahulu untuk memilih approver.
+- ProyekCair tidak melakukan verifikasi identitas legal/kenegaraan atau KYC independen terhadap final signatory sebagai prasyarat fitur. Tanggung jawab memastikan siapa orang tersebut, kapasitas internalnya, dan kelayakan penunjukannya berada pada perusahaan melalui proses internalnya. ProyekCair mengandalkan User Identity yang telah berhasil login dan status Company Membership aktif yang didaftarkan/dikelola Company Super Admin; anggota perusahaan mana pun dapat ditunjuk, tanpa syarat jabatan atau kelas pekerjaan tertentu (termasuk pekerja lapangan atau petugas kebersihan), sepanjang perusahaan memilihnya. Jangan meminta atau menyimpan NIK/KTP/alamat KTP sebagai persyaratan platform untuk final signatory. Keputusan perusahaan menunjuk orang tersebut harus tercatat dan dapat diaudit.
+- Email dan kanal notifikasi yang terdaftar digunakan untuk pemberitahuan di luar aplikasi, termasuk pemberitahuan bahwa pengguna diminta meninjau/menyetujui dokumen, dokumen yang telah ditandatangani kemudian dibatalkan, atau perubahan status penting lainnya. Untuk setiap dokumen, seluruh approver yang telah ditetapkan menerima notifikasi secara paralel (fan-out) saat workflow memulai proses pemberitahuan; reminder dan eskalasi mengikuti SLA. Notifikasi memuat referensi dokumen dan instruksi meninjau konteks/riwayat; jangan mengirim data pribadi atau isi dokumen sensitif secara berlebihan.
 - Pengguna pada tahap aktif meninjau dokumen/data, lalu melakukan tindakan eksplisit melalui aplikasi: approve/agree, reject, atau return for revision sesuai hak dan kebijakan. Klik persetujuan merupakan persetujuan elektronik internal yang tercatat; bukan tanda tangan QR.
 - **QR/tanda tangan pengesahan hanya diterbitkan oleh penandatangan akhir (final signatory)** setelah seluruh tahap persetujuan serial selesai. Tidak semua reviewer/approver membubuhkan tanda tangan QR.
 - **Default penandatangan akhir untuk workflow proyek maupun departemen adalah Manager / KTT / Project Manager**, sesuai struktur organisasi dan konteks proses. Default ini merupakan template awal, bukan aturan jabatan yang kaku atau hard-coded.
 - **Company Super Admin dapat meng-custom penunjukan final signatory** melalui Company Console berdasarkan perusahaan, jenis dokumen/formulir/kontrak, proyek, departemen, unit, atau scope lain yang diizinkan policy. Konfigurasi dapat menunjuk orang yang berbeda untuk jenis dokumen atau scope yang berbeda; tidak harus selalu pemegang jabatan default.
-- Final signatory wajib memiliki User Identity/akun ProyekCair, Company Membership aktif pada perusahaan yang menunjuk, dan Employee Record pada perusahaan tersebut. Penunjukan harus mengikat ke identitas dan record yang sah, serta memvalidasi persona yang diberikan Company Super Admin, role/permission, authority, ruang lingkup dokumen/proyek/departemen, masa berlaku, dan status aktif. Nama yang diketik bebas tidak cukup sebagai dasar otorisasi. **Pihak eksternal yang tidak memiliki akun atau membership pada perusahaan tersebut tidak boleh menjadi final signatory.**
-- **Satu orang dapat menjadi final signatory di beberapa perusahaan dengan satu User Identity global**, tetapi pada setiap perusahaan ia wajib memiliki Company Membership aktif, Employee Record, serta persona yang ditetapkan oleh Company Super Admin perusahaan tersebut. Setiap perusahaan secara terpisah menetapkan role/permission, authority, scope dokumen, dan masa berlaku penunjukan. Membership/persona/otoritas di PT A tidak memberikan hak di PT B atau PT C.
+- Final signatory wajib merupakan User Identity/akun ProyekCair dengan Company Membership aktif pada perusahaan yang menunjuknya dan telah didaftarkan sebagai anggota oleh Company Super Admin. Penunjukan harus terikat ke identitas akun/member record yang sah, bukan sekadar nama bebas yang diketik. **Tidak disyaratkan jabatan struktural, tingkat senioritas, department, atau Employee Record terpisah sebagai syarat universal**; anggota yang ditunjuk perusahaan dapat berasal dari kapasitas apa pun. Penunjukan dan cakupan dokumennya harus tercatat, dan backend tetap memeriksa keanggotaan tenant yang aktif, konteks perusahaan/dokumen, status penunjukan, serta prasyarat workflow final. ProyekCair tidak mengesahkan identitas pribadi atau kapasitas hukum penandatangan; tanggung jawab tersebut berada pada perusahaan.
+- **Satu orang dapat menjadi final signatory di beberapa perusahaan dengan satu User Identity global**, tetapi pada setiap perusahaan ia wajib memiliki Company Membership aktif dan penunjukan terpisah oleh Company Super Admin perusahaan tersebut. Membership pada PT A tidak memberikan hak di PT B atau PT C.
 - Konsep **Pihak Terkait** dalam ProyekCair dibatasi pada pengguna internal perusahaan yang memenuhi syarat akun, membership, dan Employee Record sebagaimana di atas. Istilah ini digunakan untuk konfigurasi pihak yang diberi kewenangan TTE/pengesahan QR, bukan untuk mencatat pihak eksternal tanpa akses aplikasi. Konsep ini tetap berbeda dari **Orang Terkait**, yaitu relasi legal/kepemilikan/manfaat; fitur Orang Terkait tidak termasuk aplikasi.
 - **Batas cakupan saat ini: Orang Terkait TIDAK diimplementasikan di web app ProyekCair ini.** Fitur, modul, registri, UI, API, dan skema operasional untuk mengelola Orang Terkait bukan bagian dari implementasi aplikasi ini. ProyekCair pada tahap ini hanya memodelkan penunjukan Pihak Terkait untuk kebutuhan kewenangan dan final signatory. Jangan membangun atau menampilkan fitur Orang Terkait dalam web app ini kecuali ada keputusan dan perubahan cakupan yang secara eksplisit disetujui kemudian.
 - Orang Terkait pada dasarnya adalah data hubungan legal/kepemilikan/manfaat antara seseorang dan perusahaan dan tetap di luar cakupan web app ProyekCair. Tidak ada registri atau modul Orang Terkait dalam aplikasi ini. Ketentuan konseptual mengenai Orang Terkait tidak dapat digunakan sebagai jalur alternatif untuk membuat pihak eksternal menjadi final signatory.
-- Seseorang yang menjadi final signatory di beberapa perusahaan menggunakan satu User Identity global, tetapi wajib memiliki Company Membership aktif, Employee Record, dan persona yang ditetapkan secara terpisah oleh Company Super Admin pada masing-masing perusahaan.
+- Seseorang yang menjadi final signatory di beberapa perusahaan menggunakan satu User Identity global dan wajib memiliki Company Membership aktif serta penunjukan terpisah oleh Company Super Admin di masing-masing perusahaan.
 - Contoh konseptual: seseorang yang memiliki otoritas menandatangani dokumen tertentu melalui Coretax pada beberapa perusahaan dapat dianalogikan sebagai pihak yang ditunjuk masing-masing Company Super Admin ProyekCair untuk mengesahkan jenis dokumen tertentu pada tenant mereka. **Coretax hanya contoh pola penunjukan lintas perusahaan; ProyekCair tidak mengklaim integrasi, afiliasi, atau kesetaraan kewenangan perpajakan dengan Coretax/DJP.**
 - Penunjukan lintas perusahaan tidak memberikan akses otomatis ke tenant lain, tidak memperluas kewenangan ke semua dokumen, dan tidak menggantikan proses persetujuan serial internal perusahaan. Otoritas final signatory selalu spesifik pada perusahaan dan scope penunjukannya.
 - Penetapan, perubahan, penangguhan, pencabutan, dan penggunaan kewenangan final signatory wajib dicatat dalam audit trail, termasuk pihak yang menunjuk, pihak yang ditunjuk, tenant, jenis dokumen, scope, authority, masa berlaku, dan waktu tindakan.
@@ -323,7 +332,7 @@ Setiap tahap workflow yang membutuhkan tindakan harus memiliki batas waktu/SLA y
 - Dashboard dan daftar tugas menampilkan status menunggu tindakan, prioritas, due date, serta indikator terlambat.
 - Pengingat dikirim sebelum tenggat dan/atau saat tenggat terlewati sesuai kebijakan notifikasi.
 - Jika tenggat terlewati, aplikasi menandai overdue dan menjalankan aturan eskalasi yang telah dikonfigurasi, misalnya mengingatkan atasan/level berikutnya atau administrator terkait. Eskalasi tidak boleh diam-diam dianggap sebagai persetujuan otomatis.
-- Dokumen tetap mengikuti urutan serial. Notifikasi kepada pihak berikutnya atau atasan untuk awareness/escalation tidak membuka hak approve sebelum gilirannya, kecuali terdapat mekanisme delegasi/pengganti resmi yang sah, tercatat, dan tervalidasi.
+- Semua approver dalam rangkaian dapat diberi notifikasi secara paralel untuk awareness dan saling mengingatkan. Namun hanya approver pada step aktif yang boleh mengeksekusi approve/reject/return; notifikasi kepada approver tahap berikutnya atau atasan tidak membuka hak bertindak sebelum gilirannya, kecuali delegasi/pengganti resmi yang sah, tercatat, dan tervalidasi.
 - SLA, reminder, escalation, delegation/substitution, alasan keterlambatan, serta seluruh tindakan harus masuk audit trail. Perubahan SLA setelah workflow berjalan tidak boleh menghapus jejak SLA yang berlaku ketika tahap dimulai.
 - Workflow dapat menetapkan SLA khusus untuk keputusan berdampak operasional tinggi, misalnya permintaan penambahan quantity item yang melebihi BOQ. Kasus tersebut dapat diberi tenggat singkat (contohnya 1–2 hari) agar keputusan tidak menghambat pekerjaan, sesuai kebijakan perusahaan dan tingkat risikonya.
 
@@ -367,7 +376,7 @@ Ketentuan:
 ### 6.1 Prinsip
 
 Autentikasi berhasil tidak berarti pengguna otomatis memperoleh akses ke data perusahaan. Ada dua jalur provisioning yang berbeda:
-1. **Company Super Admin:** hanya melalui permohonan resmi perusahaan kepada pemilik/operator ProyekCair, verifikasi legal/NPWP, dan provisioning satu kursi administrator oleh Platform Super Admin. NPWP menjadi identifier perusahaan; kode aktivasi perusahaan yang unik digunakan untuk mengklaim kursi tersebut dan kemudian diikat ke User Identity personal yang terverifikasi.
+1. **Company Super Admin:** melalui permohonan/proses registrasi perusahaan, pemeriksaan identitas perusahaan sesuai model Company Identity Registration (nama, NPWP, business email, identitas pemohon, dan pernyataan kebenaran), serta provisioning satu kursi administrator oleh Platform Super Admin. Pemeriksaan tersebut bukan klaim verifikasi legal independen kecuali proses independen memang dilakukan. NPWP menjadi identifier perusahaan; kode aktivasi perusahaan yang unik digunakan untuk mengklaim kursi tersebut dan kemudian diikat ke User Identity personal yang terverifikasi.
 2. **Pengguna anggota perusahaan:** melalui invitation yang dibuat Company Super Admin dari Company Console. Undangan ini memberikan membership dan role/persona/authority sesuai konfigurasi, tetapi tidak pernah memberikan kursi Company Super Admin.
 
 Tidak ada pendaftaran publik yang otomatis membuat tenant aktif atau memberikan hak Company Super Admin.
@@ -375,7 +384,7 @@ Tidak ada pendaftaran publik yang otomatis membuat tenant aktif atau memberikan 
 ### 6.2 Alur provisioning Company Super Admin
 
 1. Perusahaan menghubungi pemilik/operator ProyekCair melalui kanal resmi.
-2. Platform memverifikasi perusahaan dan NPWP serta memastikan belum ada kursi Company Super Admin aktif.
+2. Platform meninjau data Company Identity Registration (nama perusahaan, NPWP, business email, identitas pemohon, dan pernyataan kebenaran), melakukan pemeriksaan format/kelengkapan/duplikasi yang tersedia, serta memastikan belum ada kursi Company Super Admin aktif. Langkah ini tidak boleh disebut verifikasi legal pemerintah atau verifikasi independen jika tidak dilakukan.
 3. Platform membuat tenant (jika belum ada) dan satu kursi Company Super Admin.
 4. Platform menerbitkan kode aktivasi perusahaan; nilai kode hanya ditampilkan/disampaikan sekali dan hash-nya disimpan.
 5. Perwakilan yang disetujui login dengan identitas personal terverifikasi, memasukkan NPWP sebagai identifier perusahaan dan kode aktivasi, lalu menyelesaikan pengikatan identitas ke kursi tersebut.
@@ -825,7 +834,7 @@ Prinsip pemisah:
 - Permission menentukan tindakan teknis atomik.
 - Authority menentukan batas kewenangan bisnis.
 - Project Membership/Scope membatasi proyek atau resource yang dapat diakses.
-- Jabatan dan departemen merupakan struktur organisasi; keduanya tidak memberikan permission secara otomatis.
+- Label jabatan/approval adalah atribut atau preset deskriptif dan tidak otomatis memberikan permission/authority. Organization Structure Builder, departemen/divisi, bagan organisasi, dan relasi atasan-bawahan bukan prasyarat penggunaan.
 - Menu yang tampil di frontend bukan bukti otorisasi. Backend/database tetap menjadi sumber keputusan akses.
 
 Rute UI berikut hanya rekomendasi, bukan kontrak URL permanen:
@@ -833,6 +842,16 @@ Rute UI berikut hanya rekomendasi, bukan kontrak URL permanen:
 - \`/console\` — Company Super Admin Console.
 - area aplikasi operasional — Company Operational Workspace sesuai persona.
 - \`/workspace/personal\` — Personal Workspace.
+
+#### 16.1.1 Workspace Switcher / Active Context Selector
+
+Navbar menyediakan dropdown pemilih konteks kerja dengan pola interaksi seperti pemilih entitas pada aplikasi administrasi multi-entitas (analogi UI: Coretax, tanpa klaim integrasi atau kesetaraan sistem). Pilihan minimal:
+- **Personal / Umum (General User Type B)** — menampilkan nama/profil pengguna dan Personal Workspace miliknya;
+- **Perusahaan** — menampilkan nama setiap Company/Tenant tempat User Identity memiliki Company Membership yang valid;
+- **Persona** — setelah perusahaan dipilih, menampilkan persona-persona yang memang ditugaskan kepada pengguna dalam tenant itu.
+
+Memilih perusahaan/persona mengganti Active Workspace Context dan memperbarui navigasi/menu/widget sesuai effective access. Dropdown tidak boleh menampilkan atau mengizinkan pemilihan perusahaan yang tidak memiliki membership sah. Berpindah konteks bukan proses signup, invitation, atau pemberian privilege. Daftar, status, dan pilihan konteks disediakan/diotorisasi server-side; pilihan UI atau localStorage hanya preferensi tampilan dan tidak pernah menjadi bukti otorisasi.
+
 
 #### 16.1.1 Workspace Switcher / Active Context Selector
 
@@ -871,7 +890,7 @@ Dashboard platform dapat merangkum total/verified/pending companies, kursi Compa
 
 ### 16.3 Company Super Admin Workspace — ProyekCair Console
 
-Company Super Admin memperoleh Console untuk mengelola dan mengawasi tenantnya sendiri. Setiap perusahaan hanya boleh memiliki satu kursi Company Super Admin aktif. Console bukan tempat menjalankan seluruh pekerjaan operasional dan tidak otomatis memberikan hak transaksi.
+Company Super Admin memperoleh Console untuk mengelola dan mengawasi tenantnya sendiri. Setiap perusahaan hanya boleh memiliki satu kursi Company Super Admin aktif. Console bukan tempat menjalankan seluruh pekerjaan operasional dan tidak otomatis memberikan hak transaksi. Tata kelola anggota menggunakan assignment individu; Organization Structure Builder tidak diwajibkan.
 
 | Menu | Konten/tampilan frontend | Tanggung jawab backend (target) |
 |---|---|---|
@@ -879,11 +898,11 @@ Company Super Admin memperoleh Console untuk mengelola dan mengawasi tenantnya s
 | Company Profile | Identitas, NPWP, informasi legal, alamat, kontak, status dan riwayat | Company profile dan legal verification records |
 | User Management | Anggota, status akun/membership, persona dan histori | Company memberships dan assignment |
 | Invitation / RFIN-B Management | Buat, konfigurasi, tinjau, cabut dan pantau undangan | Invitation/RFIN-B lifecycle dan atomic redemption |
-| Employee Management | Employee Record, employee_number, status, riwayat | Employee records terkait membership |
-| Organizational Structure | Departemen/unit, posisi, atasan, Head Office dan struktur proyek | Departments, positions, effective-dated relations |
+| Member Profile | Profil minimum anggota; Employee Record dan employee_number hanya bila diperlukan untuk penugasan operasional/CRUD/TTE-QR | Member profile dan Employee Records terkait membership bila use case memang memerlukannya |
+| Individual Access Assignment | Persona, role/permission, label jabatan/approval bila dipakai, authority, project scope, dan masa berlaku per orang | Individual membership/persona/role/authority/project assignments; tidak mensyaratkan Org Structure Builder |
 | Persona Management | Penugasan satu atau beberapa persona | Persona assignments dalam tenant |
 | Role & Permission Management | Template/custom role dalam katalog dan guardrail | Role, role-permission, assignments dan policy validation |
-| Authority Management | Limit dan kewenangan bisnis | Authority policies/assignments |
+| Authority Management | Limit dan kewenangan bisnis yang diatur sesuai kebijakan; bukan inferensi dari label jabatan | Authority policies/assignments |
 | Project Management | Daftar dan detail proyek perusahaan | Tenant-owned projects |
 | Project Assignment | Anggota, persona dan tanggung jawab per proyek | Project memberships/scopes |
 | Workflow & Approval | Definisi tahap, urutan, SLA, reminder dan eskalasi | Workflow definitions, instances dan policy validation |
@@ -893,6 +912,11 @@ Company Super Admin memperoleh Console untuk mengelola dan mengawasi tenantnya s
 | Company Settings | Preferensi dan konfigurasi yang diperbolehkan | Tenant configuration dalam guardrail platform |
 
 Company Dashboard dapat menampilkan status profil, total/active memberships, undangan pending, Employee Records aktif, proyek, pending approvals, ringkasan aktivitas, status dokumen, security/access alerts, dan audit terbaru sesuai hak akses.
+
+#### 16.3.0 Administrasi anggota tanpa bagan organisasi wajib
+
+Company Console mengutamakan pengelolaan anggota dan penugasan individu. Tidak ada menu atau dependensi wajib untuk membangun departemen, divisi, bagan organisasi, atau relasi atasan-bawahan. Company Super Admin mengatur setiap anggota secara langsung: persona, role/permission, label jabatan/approval bila dipakai, authority, project scope, dan masa berlaku. Employee Record merupakan record minimum hanya untuk use case yang membutuhkannya sebagaimana bagian 4.1; ia bukan registri seluruh tenaga kerja perusahaan. Project Membership/Scope tetap wajib ditegakkan secara terpisah dan tidak boleh ditiadakan hanya karena Org Structure Builder tidak digunakan.
+
 
 #### 16.3.0 Administrasi anggota tanpa bagan organisasi wajib
 
@@ -957,6 +981,11 @@ Dashboard dibangun sebagai komposisi widget berbasis permission dan scope, bukan
 Matriks modul hanyalah template UX. Hak create/read/update/delete/review/approve/sign harus ditetapkan per permission dan diuji pada backend. Nama persona atau jabatan tidak boleh menjadi satu-satunya dasar authorization.
 
 ##### 16.4.1a Assignment approver per dokumen dan notifikasi paralel
+
+Pembuat/pengaju dokumen dapat memilih urutan approver secara individual untuk dokumen tersebut, termasuk jumlah tahap yang sesuai kebutuhan. Template workflow dapat membantu, tetapi bukan keharusan. Ketika rangkaian disimpan/dimulai, notifikasi dikirim kepada seluruh approver yang ditetapkan secara paralel. Eksekusi keputusan tetap serial: backend hanya menerima tindakan dari approver pada step aktif; tindakan dari approver tahap lain harus ditolak. Pemilihan nama/akun oleh pembuat dokumen tidak memberi hak secara otomatis—backend wajib memvalidasi User Identity, Company Membership aktif, permission tindakan, authority/policy yang berlaku, project/resource scope, status aktif, dan tidak adanya konflik/larangan. Perubahan approver setelah workflow dimulai harus melalui prosedur terkendali dan teraudit.
+
+
+#### 16.4.1a Assignment approver per dokumen dan notifikasi paralel
 
 Pembuat/pengaju dokumen dapat memilih urutan approver secara individual untuk dokumen tersebut, termasuk jumlah tahap yang sesuai kebutuhan. Template workflow dapat membantu, tetapi bukan keharusan. Ketika rangkaian disimpan/dimulai, notifikasi dikirim kepada seluruh approver yang ditetapkan secara paralel. Eksekusi keputusan tetap serial: backend hanya menerima tindakan dari approver pada step aktif; tindakan dari approver tahap lain harus ditolak. Pemilihan nama/akun oleh pembuat dokumen tidak memberi hak secara otomatis—backend wajib memvalidasi User Identity, Company Membership aktif, permission tindakan, authority/policy yang berlaku, project/resource scope, status aktif, dan tidak adanya konflik/larangan. Perubahan approver setelah workflow dimulai harus melalui prosedur terkendali dan teraudit.
 
@@ -1105,6 +1134,16 @@ Isi menu dan widget di bagian ini adalah target arsitektur. Hal-hal berikut belu
 - Acceptance threshold operasional, SLA default, dan metrik Company Readiness.
 
 Keputusan tersebut harus dituangkan pada katalog permission, frontend-backend contract, database mapping, RLS/authorization matrix, dan test matrix sebelum implementasi.
+
+### Versi 2.5 — 2026-11-14
+- Memperjelas Company Identity Registration berbasis nama perusahaan, NPWP, business email, identitas pemohon, dan pernyataan kebenaran; membedakan deklarasi/pemeriksaan format dari verifikasi legal independen, serta menegaskan ProyekCair bukan otoritas pemerintah.
+- Menambahkan Workspace Switcher di Navbar untuk Personal/Umum, daftar perusahaan yang memiliki membership sah, dan persona yang ditugaskan; server-side context tetap menjadi sumber otorisasi.
+- Menetapkan pendekatan Company Console berbasis penugasan individu dan menghapus Org Structure Builder/departemen/divisi/bagan organisasi sebagai kebutuhan wajib; Employee Record hanya untuk kebutuhan operasional tertentu dan Project Membership/Scope tetap wajib.
+- Menegaskan label jabatan/approval level merupakan preset/atribut deskriptif yang dapat disesuaikan perusahaan, bukan pemberi permission atau authority otomatis.
+- Memperjelas bahwa seluruh approver menerima notifikasi secara paralel, sedangkan eksekusi approve/reject/return tetap serial dan hanya step aktif yang dapat bertindak; pembuat dokumen dapat memilih urutan approver per dokumen dengan validasi backend.
+- Menyelaraskan penunjukan final signatory/TTE/QR: perusahaan bertanggung jawab atas verifikasi dan pemilihan internal; syarat platform adalah User Identity terautentikasi dan Company Membership aktif yang didaftarkan Company Super Admin. Tidak ada persyaratan jabatan/senioritas atau KTP/NIK/KYC independen oleh ProyekCair.
+- Menegaskan kembali TTE/QR privat, non-publik, dan batas akses tenant; tidak mengubah keputusan tentang approval serial, notifikasi paralel, atau akses scan/verifikasi privat.
+
 
 ### Versi 2.5 — 2026-11-14
 - Memperjelas Company Identity Registration berbasis nama perusahaan, NPWP, business email, identitas pemohon, dan pernyataan kebenaran; membedakan deklarasi/pemeriksaan format dari verifikasi legal independen, serta menegaskan ProyekCair bukan otoritas pemerintah.
