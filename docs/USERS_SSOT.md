@@ -1359,8 +1359,8 @@ Audit lama melaporkan:
 ### 21.4 Legacy data dan migrasi
 
 Pertahankan keputusan historis berikut sampai ownership diputuskan eksplisit:
-- CV Menara Megah tidak otomatis menjadi Company Workspace.
-- PT IMK tidak otomatis menjadi tenant kedua.
+- Keputusan bisnis terbaru (14 November 2026): CV Menara Megah adalah tenant pemilik Company Workspace untuk project UDU; PT IMK adalah client dan bukan tenant kedua.
+- Keputusan bisnis tersebut tidak otomatis memprovisioning Company/Company Workspace atau Company Super Admin; onboarding dan claim tetap harus melalui alur resmi Platform Super Admin.
 - Data BOQ, stok, kas, progres, K3 dan dokumen legacy tidak dipindahkan tanpa kesepakatan ownership/scope.
 - project_personnel bukan User Identity dan tidak dikonversi otomatis menjadi Auth User.
 - Migrasi schema sebisa mungkin additive, mempunyai backup, rollback plan, data reconciliation, positive/negative tests, cross-tenant tests, dan regression tests.
