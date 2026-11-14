@@ -15,13 +15,15 @@ The project follows the business and security decisions in [USERS_SSOT.md](docs/
   - [Legacy Mapping Ledger](docs/migration/UDU_LEGACY_MAPPING_LEDGER_2026-11-14.csv)
 
 ### Verified
-- Live Supabase project `sjwheagxwpnqckmqxyme` currently has 0 companies, 0 company memberships, and 0 company registration requests.
-- The project has 3 Personal Workspaces and no provisioned Company Workspace.
+- Live Supabase project `sjwheagxwpnqckmqxyme` is `ACTIVE_HEALTHY` (Postgres 17.11.0.019, region `ap-southeast-2`).
+- Live project currently has 0 companies, 0 company memberships, and 0 company registration requests; it has 3 Personal Workspaces and no provisioned Company Workspace.
 - Current Company Registration schema has nullable NPWP ciphertext/last-four fields and does not expose a required NPWP submission contract or a deterministic protected duplicate fingerprint.
 - Current registration lifecycle still uses the legacy `SUBMITTED / UNDER_REVIEW / APPROVED / REJECTED` statuses. This does not yet implement the SSOT lifecycle `PENDING → ACCEPTED | REJECTED`, followed by tenant `CLAIM_PENDING` and Company Super Admin seat `UNCLAIMED`.
 - Existing Company approval/provisioning RPCs require remediation before use; they must not be used to provision CV Menara Megah.
 - Operational legacy tables do not yet have canonical `workspace_id` and `project_id` scope columns. The current `project_control` singleton is legacy project settings, not a canonical project registry.
-- The existing Supabase branch inventory exposes only the production `main` branch; it is marked `MIGRATIONS_FAILED`. No healthy staging branch was available for safe schema rollout and verification.
+- Supabase branch inventory currently contains only `main`; its branch status reports `MIGRATIONS_FAILED`, while the parent project control-plane status is `ACTIVE_HEALTHY`. No separate staging branch exists.
+- Security Advisor currently reports six authenticated-callable `SECURITY DEFINER` functions and leaked-password protection disabled. These are additional security review items; they are not silently modified as part of the onboarding work.
+- Supabase quoted the development branch at **USD 0.01344/hour** (approximately **USD 9.81 per 730-hour month** if left running). Branch creation has not been requested because this recurring cost requires explicit approval.
 
 ### Not yet implemented — blocked by release gates
 The following work is **not claimed as implemented** in this change. No production database schema, data, Auth identity, membership, RLS policy, storage object, or deployment was changed.
@@ -48,5 +50,5 @@ The following work is **not claimed as implemented** in this change. No producti
 - Do not run legacy company approval RPCs to create CV Menara Megah or issue RFIN-A.
 - Do not create a PT IMK Company, Workspace, or Membership.
 - Do not backfill the ledger with guessed IDs or infer tenant/project access from BOQ owner labels.
-- Do not apply DDL or data migrations to production while the only listed branch is unhealthy and no staging verification environment is available.
+- Do not apply DDL or data migrations to production before a healthy staging environment and passing security/isolation tests are available.
 - Supabase CLI v3 changes database commands to local-by-default and requires explicit hosted-change confirmation; any future deployment pipeline must deliberately target the intended environment. See the [Supabase CLI v3 breaking-change notice](https://supabase.com/changelog?types=breaking-change).
