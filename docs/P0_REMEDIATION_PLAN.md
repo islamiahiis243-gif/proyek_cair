@@ -402,3 +402,7 @@ Temuan tersebut berasal dari audit implementasi terdahulu dan tidak boleh diperl
 ---
 
 **Keputusan akhir:** dokumen ini dapat dipakai sebagai baseline desain remediation P0 dan bahan review engineering/security. Dokumen ini bukan SQL migration, bukan bukti implementasi, dan bukan otorisasi untuk mengubah database produksi.
+
+## 15. Pre-migration ownership mapping gate
+
+Sebelum migration SQL pertama untuk tenant/project isolation, gunakan [Project Ownership Mapping & Schema Gap Specification](./PROJECT_OWNERSHIP_MAPPING_SCHEMA_GAP.md). Dokumen tersebut memetakan seluruh tabel legacy, parent-scope invariants, permission baseline SSOT, row-count snapshot, ownership yang belum terselesaikan, dan release gate. **Migration backfill tetap diblokir sampai workspace owner dan canonical project registry disetujui.**
