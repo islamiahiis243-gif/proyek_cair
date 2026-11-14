@@ -6,6 +6,15 @@ The project follows the business and security decisions in [USERS_SSOT.md](docs/
 
 ## [Unreleased] — 2026-11-14
 
+### 2026-11-14 19:22 WIB — NPWP key custody runbook
+
+- Added docs/NPWP_KEY_BACKUP_RECOVERY_RUNBOOK.md with procedures for the Proyek Cair NPWP application master key and the separate Supabase-managed Vault root encryption key.
+- Documented secure external escrow, same-project restore, new-project logical migration, key-rotation constraints (ciphertext and deterministic fingerprints must be reprocessed together), and incident response.
+- Verified only Vault secret metadata for proyek_cair_npwp_master_key; the secret value was not retrieved or exposed.
+- **Not completed:** no external key backup, custody attestation, or recovery drill was performed. The pre-NPWP-intake gate remains OPEN. No production database schema/data changes were made.
+- Timestamp uses project local time (WIB, UTC+7).
+
+
 ### Implemented directly on the live Supabase project
 
 No Supabase staging branch was created. The user explicitly requested direct remediation without a staging branch. The following database migrations were applied to project `sjwheagxwpnqckmqxyme` and verified in the live migration history:
@@ -84,7 +93,7 @@ No Supabase staging branch was created. The user explicitly requested direct rem
 - Do not use the legacy `APPROVED` company approval path or create a Company/Workspace by manual shortcut.
 - Do not create a PT IMK Company, Workspace, or Membership.
 - Do not infer tenant/project permissions from BOQ owner labels or project personnel roster rows.
-- NPWP encryption master key is stored in Supabase Vault. Establish and document backup/recovery, rotation, and incident-response procedures before collecting real company NPWP at scale.
+- NPWP encryption master key is stored in Supabase Vault. The operator procedure is now documented in docs/NPWP_KEY_BACKUP_RECOVERY_RUNBOOK.md; external escrow, custody verification, and a recovery drill remain mandatory before collecting real company NPWP at scale.
 - Enable Supabase Auth leaked-password protection and review the six remaining pre-existing SECURITY DEFINER findings.
 - Supabase Vault documentation: https://supabase.com/docs/guides/database/vault
 - Supabase RLS documentation: https://supabase.com/docs/guides/database/postgres/row-level-security
