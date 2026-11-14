@@ -408,3 +408,12 @@ Temuan tersebut berasal dari audit implementasi terdahulu dan tidak boleh diperl
 ## 15. Pre-migration ownership mapping gate
 
 Sebelum migration SQL pertama untuk tenant/project isolation, gunakan [Project Ownership Mapping & Schema Gap Specification](./PROJECT_OWNERSHIP_MAPPING_SCHEMA_GAP.md). Dokumen tersebut memetakan seluruh tabel legacy, parent-scope invariants, permission baseline SSOT, row-count snapshot, keputusan bisnis terbaru (tenant CV Menara Megah, project UDU, client PT IMK), schema gap, dan release gate. **Business ownership telah diputuskan; migration backfill tetap diblokir sampai Company Workspace diprovisioning, canonical project registry/ID dan mapping ledger disetujui.**
+
+
+## Business-to-technical cutover gate — 2026-11-14
+
+Business identity is fixed: platform Proyek Cair; tenant CV Menara Megah; project UDU; client PT IMK (not tenant). The row-level ledger and canonical project registry specification are now available in docs/migration/UDU_LEGACY_MAPPING_LEDGER_2026-11-14.csv, docs/UDU_CANONICAL_PROJECT_REGISTRY_SPEC.md, and docs/UDU_TENANT_PROJECT_CUTOVER_READINESS.md.
+
+Do not provision Menara Megah using the current company review RPC. Live schema review found NPWP is not enforced as required/unique, the submission RPC does not accept NPWP, companies lacks the required protected NPWP fields, and approval currently creates a VERIFIED company and ACTIVE workspace directly rather than CLAIM_PENDING plus an UNCLAIMED Company Super Admin seat. This conflicts with SSOT v3.1.
+
+The next implementation unit is a dedicated onboarding lifecycle/NPWP remediation, followed by canonical projects/project-client schema and RLS. Only after those are tested should the approved applicant/claimant go through Platform Super Admin approval and RFIN-A claim. Existing legacy data remains untouched.
