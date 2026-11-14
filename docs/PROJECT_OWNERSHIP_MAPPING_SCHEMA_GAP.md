@@ -400,3 +400,19 @@ Live snapshot confirms companies=0, company_memberships=0, company_registration_
 A critical onboarding gap is now recorded: company_registration_requests NPWP fields are nullable and lack a unique deterministic duplicate fingerprint; submit_company_registration does not accept NPWP; companies does not retain encrypted/fingerprint NPWP; current review flow directly creates VERIFIED company + ACTIVE workspace. This does not match SSOT v3.1's ACCEPTED → CLAIM_PENDING + UNCLAIMED seat → RFIN-A claim → ACTIVE lifecycle. Do not use the current approval RPC to provision Menara Megah.
 
 Canonical schema and cutover sequence are specified in [UDU_CANONICAL_PROJECT_REGISTRY_SPEC.md](./UDU_CANONICAL_PROJECT_REGISTRY_SPEC.md) and [UDU_TENANT_PROJECT_CUTOVER_READINESS.md](./UDU_TENANT_PROJECT_CUTOVER_READINESS.md). Backfill remains blocked pending onboarding remediation, claimant designation, canonical project registry/RLS contract, mapping review, and staging rehearsal.
+
+
+---
+
+## Update 2026-11-14 — after direct production registry foundation
+
+The earlier findings above are the pre-remediation baseline. The following changes have since been applied directly to the live Supabase project without creating a staging branch:
+
+- Canonical tables `projects`, `project_client_relationships`, `project_memberships`, and `project_membership_permissions` now exist with RLS enabled.
+- Guarded Company Super Admin RPCs manage project creation and project membership/permission assignment.
+- Composite tenant/workspace and project/workspace foreign-key integrity has been added.
+- Nullable paired `workspace_id` and `project_id` columns and indexes now exist on all 16 legacy operational tables listed in the cutover readiness report.
+- No legacy operational rows were backfilled. Existing operational-table RLS has not yet been changed to enforce these new scope columns. Do not treat the nullable columns as completed isolation.
+- Company registration NPWP encryption/fingerprint and `CLAIM_PENDING` / `UNCLAIMED` lifecycle were implemented in the same direct-production migration sequence; see [CHANGELOG.md](../CHANGELOG.md) and [UDU Tenant/Project Cutover Readiness](./UDU_TENANT_PROJECT_CUTOVER_READINESS.md).
+
+The original table-by-table analysis remains useful as a mapping guide. Its statements that scope columns and the Project Registry are absent describe the earlier snapshot, not the live schema after the five migrations.
