@@ -6,49 +6,79 @@ The project follows the business and security decisions in [USERS_SSOT.md](docs/
 
 ## [Unreleased] — 2026-11-14
 
-### Added
-- Established this changelog as the implementation record for the Proyek Cair platform.
-- Recorded the approved implementation sequence for Company Registration, Company claim lifecycle, canonical Project Registry, CV Menara Megah tenant provisioning, Company Super Admin claim, UDU project/client relationship, and legacy-data backfill.
-- Recorded the live-environment readiness baseline and explicit release gates in:
-  - [UDU Tenant/Project Cutover Readiness](docs/UDU_TENANT_PROJECT_CUTOVER_READINESS.md)
-  - [Canonical Project Registry Specification](docs/UDU_CANONICAL_PROJECT_REGISTRY_SPEC.md)
-  - [Legacy Mapping Ledger](docs/migration/UDU_LEGACY_MAPPING_LEDGER_2026-11-14.csv)
+### Implemented directly on the live Supabase project
 
-### Verified
-- Live Supabase project `sjwheagxwpnqckmqxyme` is `ACTIVE_HEALTHY` (Postgres 17.11.0.019, region `ap-southeast-2`).
-- Live project currently has 0 companies, 0 company memberships, and 0 company registration requests; it has 3 Personal Workspaces and no provisioned Company Workspace.
-- Current Company Registration schema has nullable NPWP ciphertext/last-four fields and does not expose a required NPWP submission contract or a deterministic protected duplicate fingerprint.
-- Current registration lifecycle still uses the legacy `SUBMITTED / UNDER_REVIEW / APPROVED / REJECTED` statuses. This does not yet implement the SSOT lifecycle `PENDING → ACCEPTED | REJECTED`, followed by tenant `CLAIM_PENDING` and Company Super Admin seat `UNCLAIMED`.
-- Existing Company approval/provisioning RPCs require remediation before use; they must not be used to provision CV Menara Megah.
-- Operational legacy tables do not yet have canonical `workspace_id` and `project_id` scope columns. The current `project_control` singleton is legacy project settings, not a canonical project registry.
-- Supabase branch inventory currently contains only `main`; its branch status reports `MIGRATIONS_FAILED`, while the parent project control-plane status is `ACTIVE_HEALTHY`. No separate staging branch exists.
-- Security Advisor currently reports six authenticated-callable `SECURITY DEFINER` functions and leaked-password protection disabled. These are additional security review items; they are not silently modified as part of the onboarding work.
-- Supabase quoted the development branch at **USD 0.01344/hour** (approximately **USD 9.81 per 730-hour month** if left running). Branch creation has not been requested because this recurring cost requires explicit approval.
+No Supabase staging branch was created. The user explicitly requested direct remediation without a staging branch. The following database migrations were applied to project `sjwheagxwpnqckmqxyme` and verified in the live migration history:
 
-### Not yet implemented — blocked by release gates
-The following work is **not claimed as implemented** in this change. No production database schema, data, Auth identity, membership, RLS policy, storage object, or deployment was changed.
+- `20261114120103_company_npwp_claim_and_project_registry`
+- `20261114120137_company_super_admin_designation_and_sensitive_column_acl`
+- `20261114120248_harden_company_and_project_rpc_wrappers`
+- `20261114120315_enforce_company_project_workspace_integrity`
 
-1. **Company Registration security**
-   - Required: server-side NPWP normalization/validation, encryption, keyed deterministic fingerprint with uniqueness, masked display, restricted access, log redaction, and mandatory NPWP RPC contract.
-   - Gate: agree/verify the encryption-key custody and rotation mechanism, then implement and test on a healthy staging database.
-2. **Company claim lifecycle**
-   - Required: application `PENDING → ACCEPTED | REJECTED`; accepted company in `CLAIM_PENDING`; one distinct Company Super Admin seat in `UNCLAIMED`; activate only after authorized RFIN-A claim.
-   - Gate: implement claim-seat storage and atomic, authorized, replay-safe claim flow; test unauthorized review, wrong claimant, expiry, replay, and no pre-claim active tenant.
-3. **Canonical Project Registry and authorization**
-   - Required: canonical `projects`, client relationship records, tenant/project referential integrity, project membership/scope, permission checks, and RLS for all scoped operational data.
-   - Gate: resolve and migrate all legacy-table scope mappings without treating PT IMK commercial labels or roster rows as tenant membership or access grants.
-4. **CV Menara Megah provisioning**
-   - Blocked until steps 1–3 pass staging acceptance and the authorized company application is accepted. Do not create a tenant or Company Workspace by manual shortcut.
-5. **Company Super Admin claim**
-   - Blocked until the official accepted-application flow issues RFIN-A and the authorized claimant completes the claim.
-6. **UDU and PT IMK relationship**
-   - Blocked until the Company Workspace and Project Registry are available. Create UDU under CV Menara Megah; represent PT IMK only as the project's client relationship, never as a tenant from commercial BOQ labels.
-7. **Legacy backfill and isolation tests**
-   - Blocked until canonical workspace/project IDs exist and the staging schema is ready. Use the mapping ledger; do not infer Auth identities, Company Memberships, project memberships, or permissions from the 13-row operational personnel roster.
+### Added / Changed
 
-### Operational safeguards
-- Do not run legacy company approval RPCs to create CV Menara Megah or issue RFIN-A.
+1. **Company Registration and NPWP**
+   - Company application now requires legal name, NPWP, and a separately designated Company Super Admin email; business email remains optional.
+   - Server-side normalization accepts 15- or 16-digit NPWP input and rejects malformed characters/lengths. This is format validation, not tax-authority verification or a checksum/legal verification.
+   - NPWP is encrypted with AES-256 PGP encryption. A random master key was generated inside the database and stored in Supabase Vault; purpose-derived keys separate encryption from deterministic duplicate detection.
+   - Duplicate detection uses keyed HMAC-SHA256 fingerprints, advisory transaction locking, and unique indexes across application and company records.
+   - Authenticated API roles cannot select NPWP ciphertext or fingerprints. The UI only displays the final four digits to Platform Super Admin reviewers.
+   - The legacy three-argument registration RPC was removed. The new RPC requires NPWP and the designated Company Super Admin email.
+
+2. **Company lifecycle and Company Super Admin seat**
+   - Application lifecycle is now `PENDING → ACCEPTED | REJECTED`.
+   - Acceptance creates a Company in `CLAIM_PENDING`, a Company Workspace in `CLAIM_PENDING`, and one reserved `UNCLAIMED` Company Super Admin seat.
+   - RFIN-A issuance is restricted to the reserved claimant email and an unclaimed seat.
+   - RFIN-A redemption atomically creates the active Company Super Admin membership, claims the seat, and activates the Company and Workspace.
+   - A partial unique index prevents more than one active Company Super Admin membership per Company.
+   - Existing RFIN-B activation is limited to already-active Companies.
+
+3. **Canonical Project Registry and permission scope foundation**
+   - Added `projects`, `project_client_relationships`, `project_memberships`, and `project_membership_permissions`.
+   - Added RLS to all four registry/relationship/membership tables.
+   - Project creation and membership assignment use guarded RPCs; exposed PostgREST wrappers are `SECURITY INVOKER`, while privileged implementation functions remain in the non-exposed `private` schema.
+   - Composite foreign keys enforce workspace/company membership consistency and project/workspace consistency.
+   - Added nullable paired `workspace_id` and `project_id` columns plus indexes and integrity constraints to 16 legacy operational tables: `project_control`, BOQ, schedules, inventory, cash, progress, safety, media, documents/signatures, attachments, and personnel.
+   - Existing operational rows were not backfilled. Operational-table RLS cutover remains pending until the canonical project IDs and reviewed ledger mapping are available; this migration does not claim cross-tenant isolation is complete for legacy operational data.
+
+4. **Workspace Center UI**
+   - Registration form now collects NPWP and the designated Company Super Admin email.
+   - Review queue displays only masked NPWP (last four digits) and uses `PENDING → ACCEPTED/REJECTED`.
+   - RFIN-A action uses the reserved seat email instead of accepting an arbitrary recipient.
+
+### Verification
+
+- All four migrations appear in the live Supabase migration history.
+- NPWP encryption/decryption round-trip test passed using synthetic test digits; normalization test returned 15 digits.
+- Vault master-key presence verified without exposing the key.
+- NPWP ciphertext is not selectable by the `authenticated` role in either applications or companies.
+- Unique NPWP fingerprint index exists; all four Project Registry tables have RLS enabled.
+- All 16 listed legacy operational tables now have both scope columns.
+- Existing production counts remain unchanged: `companies=0`, `company_registration_requests=0`, `company_memberships=0`, `projects=0`. No tenant, user, membership, project, or legacy operational row was created or reassigned.
+- Security Advisor no longer flags the three newly added public onboarding/project RPC wrappers as exposed `SECURITY DEFINER` functions. Six pre-existing operational `SECURITY DEFINER` RPC warnings and disabled leaked-password protection remain for separate remediation.
+- No staging branch was created and no staging cost was incurred.
+
+### Remaining work / execution gates
+
+4. **Provision CV Menara Megah**
+   - Not performed. An authorized applicant must submit the Company Registration form with the real NPWP and designated claimant email; Platform Super Admin must then accept the application. No company or workspace is created manually.
+
+5. **Claim Company Super Admin**
+   - Not performed. After acceptance, Platform Super Admin must issue RFIN-A to the designated email and the claimant must redeem it while authenticated with that email.
+
+6. **Create Project UDU and PT IMK client relationship**
+   - Not performed because the Company Workspace and claimed Super Admin do not yet exist. Once available, create UDU under CV Menara Megah and record PT IMK only as a project client relationship. PT IMK must not become a tenant or receive membership from BOQ responsibility labels.
+
+7. **Backfill legacy ledger and isolation testing**
+   - Not performed. Wait for canonical Company Workspace and Project IDs, review the 1,440-row ledger, then backfill in controlled batches. The 13 personnel roster rows remain roster-only and must not be converted into Auth identities, Company Memberships, project memberships, or permissions.
+   - Apply restrictive tenant/project policies to legacy operational tables only as part of the reviewed cutover, with positive and negative cross-tenant tests. The new nullable scope columns alone do not provide complete operational RLS isolation.
+
+### Operational safeguards and follow-up
+
+- Do not use the legacy `APPROVED` company approval path or create a Company/Workspace by manual shortcut.
 - Do not create a PT IMK Company, Workspace, or Membership.
-- Do not backfill the ledger with guessed IDs or infer tenant/project access from BOQ owner labels.
-- Do not apply DDL or data migrations to production before a healthy staging environment and passing security/isolation tests are available.
-- Supabase CLI v3 changes database commands to local-by-default and requires explicit hosted-change confirmation; any future deployment pipeline must deliberately target the intended environment. See the [Supabase CLI v3 breaking-change notice](https://supabase.com/changelog?types=breaking-change).
+- Do not infer tenant/project permissions from BOQ owner labels or project personnel roster rows.
+- NPWP encryption master key is stored in Supabase Vault. Establish and document backup/recovery, rotation, and incident-response procedures before collecting real company NPWP at scale.
+- Enable Supabase Auth leaked-password protection and review the six remaining pre-existing SECURITY DEFINER findings.
+- Supabase Vault documentation: https://supabase.com/docs/guides/database/vault
+- Supabase RLS documentation: https://supabase.com/docs/guides/database/postgres/row-level-security
