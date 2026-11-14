@@ -143,7 +143,7 @@ Client relationships intentionally do not reference `companies` or Company Membe
 - Updated package.json esbuild devDependency to ^0.28.0 after Vite 8.3.8 dependency resolution exposed a peer mismatch with esbuild 0.25; dependency installation and the production build then passed in an isolated Vercel Sandbox.
 - Production build ran TypeScript noEmit plus Vite production bundling and transformed 1,951 modules. Existing >500 kB chunk-size warning remains. The repository did not contain package-lock.json; install was therefore resolved from package.json, and no lockfile was committed.
 - Replaced the anonymous QR verification route with private AuthGate + permission-bound RPC; QR scan success/denial is now audited.
-- Latest Vercel deployment for the full SSOT/QR security changes is pending a fresh build verification (see subsequent release record).
+- Clean dependency installation and production build were re-run after the private QR frontend changes; TypeScript and Vite production build passed (1,951 modules). The Vercel production build for the final commit is still to be checked after this documentation update.
 - Updated CHANGELOG.md with implementation, verification results, and remaining gates.
 - Latest Vercel production deployment for the updated main commit reports READY.
 
