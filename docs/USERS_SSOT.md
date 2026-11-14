@@ -83,7 +83,7 @@ Aturan:
 
 **Setiap perusahaan HANYA boleh memiliki satu Company Super Admin aktif.** Company Super Admin adalah administrator tertinggi untuk satu tenant perusahaan. Ketentuan satu akun ini bersifat normatif dan tidak dapat ditambah oleh Company Super Admin, pengguna biasa, atau proses invitation.
 
-Calon Company/Tenant mengajukan registrasi melalui aplikasi menggunakan NPWP dan autentikasi Google. Pengajuan berstatus `PENDING` dan mengirim notifikasi kepada Platform Super Admin. Status tetap `PENDING` sampai Platform Super Admin memutuskan `ACCEPTED` atau `REJECTED`. Hanya setelah `ACCEPTED` tenant dapat diprovisioning dan satu kursi Company Super Admin diaktifkan. Review ini adalah keputusan menerima/menolak deklarasi dan informasi yang tersedia, bukan verifikasi legal independen atau KYC pemerintah.
+Calon Company/Tenant mengajukan registrasi melalui aplikasi menggunakan NPWP dan autentikasi Google. Pengajuan berstatus `PENDING` dan mengirim notifikasi kepada Platform Super Admin. Status tetap `PENDING` sampai Platform Super Admin memutuskan `ACCEPTED` atau `REJECTED`. Setelah `ACCEPTED`, Platform memulai provisioning tenant dalam status `CLAIM_PENDING` dan menyiapkan satu kursi Company Super Admin yang belum diklaim; tenant dan kursi baru menjadi aktif setelah proses signup/claim pemegang kursi diselesaikan sesuai Bagian 17. Review ini adalah keputusan menerima/menolak deklarasi dan informasi yang tersedia, bukan verifikasi legal independen atau KYC pemerintah.
 
 #### 3.2.1 Provisioning akun Company Super Admin
 
@@ -91,8 +91,8 @@ Calon Company/Tenant mengajukan registrasi melalui aplikasi menggunakan NPWP dan
 2. Sistem menormalisasi NPWP, memeriksa format/kelengkapan dan duplikasi. Lolos pemeriksaan ini tidak berarti status legal perusahaan atau kewenangan pemohon diverifikasi independen.
 3. Pengajuan disimpan dengan status `PENDING`; Platform Super Admin menerima notifikasi. Selama belum ada keputusan eksplisit, status tetap `PENDING` dan tenant belum aktif.
 4. Platform Super Admin meninjau deklarasi/informasi yang tersedia dan memutuskan `ACCEPTED` atau `REJECTED`. Tidak ada auto-activation. Alasan keputusan dicatat dalam audit trail. Review bukan verifikasi legal independen, verifikasi pemerintah, atau KYC.
-5. Setelah `ACCEPTED`, sistem membuat/mengaktifkan Company/Tenant dan menyediakan tepat satu kursi Company Super Admin. Penerimaan aplikasi dan aktivasi kursi admin adalah state/proses terpisah.
-6. Company Super Admin melakukan sign-up menggunakan email atau Google. Setelah sign-up dan provisioning kursi Company Super Admin disetujui, akun ditautkan ke Company/Tenant dan User Identity internal yang stabil (`auth.users.id`). Untuk sign-in berikutnya, Company Super Admin menggunakan NPWP perusahaan sebagai login identifier dan kata sandi sebagai credential rahasia. NPWP bukan kata sandi dan tidak boleh diperlakukan sebagai secret. Sistem memverifikasi pasangan NPWP + kata sandi, lalu memetakan sesi terautentikasi ke User Identity dan tenant yang tepat. Password disimpan hanya dalam bentuk hash menggunakan mekanisme password hashing yang aman; implementasi wajib menyediakan rate limiting, proteksi brute-force/credential stuffing, lockout atau throttling adaptif, reset/recovery aman, dan audit peristiwa autentikasi.
+5. Setelah `ACCEPTED`, sistem membuat record Company/Tenant dalam status `CLAIM_PENDING` dan menyediakan tepat satu kursi Company Super Admin berstatus `UNCLAIMED`. Penerimaan aplikasi, provisioning tenant, signup/claim pemegang kursi, dan aktivasi tenant adalah state/proses terpisah.
+6. Calon pemegang kursi menyelesaikan signup baru menggunakan email atau Google (atau sign-in/reauthentication jika sudah memiliki User Identity) setelah persetujuan Platform dan provisioning claim diberikan. Setelah claim berhasil, akun ditautkan ke Company/Tenant dan User Identity internal yang stabil (`auth.users.id`). Untuk sign-in berikutnya, Company Super Admin menggunakan NPWP perusahaan sebagai login identifier dan kata sandi sebagai credential rahasia. NPWP bukan kata sandi dan tidak boleh diperlakukan sebagai secret. Sistem memverifikasi pasangan NPWP + kata sandi, lalu memetakan sesi terautentikasi ke User Identity dan tenant yang tepat. Password disimpan hanya dalam bentuk hash menggunakan mekanisme password hashing yang aman; implementasi wajib menyediakan rate limiting, proteksi brute-force/credential stuffing, lockout atau throttling adaptif, reset/recovery aman, dan audit peristiwa autentikasi.
 7. Kursi Company Super Admin tetap terikat pada User Identity internal stabil (`auth.users.id`) untuk relasi dan audit. Login khusus memetakan sesi terverifikasi ke User Identity tersebut; NPWP tidak menggantikan `user_id`.
 8. Platform Super Admin menjalankan provisioning/aktivasi kursi tunggal melalui Platform Administration Engine. RFIN-A dapat dipakai sebagai credential aktivasi/claim satu kali bila diperlukan. RFIN-A bukan faktor login berulang. A2F/MFA adalah fitur keamanan opsional yang disediakan platform dan dapat diwajibkan oleh kebijakan tenant untuk kelompok pengguna atau tindakan tertentu; bukan syarat universal aktivasi Company Super Admin.
 9. RFIN-A, bila digunakan, memiliki entropy tinggi, expiry, tenant binding, rate limit, redemption atomik satu kali, dan disimpan sebagai hash setelah issuance.
@@ -147,7 +147,7 @@ Aturan custom:
 
 #### 3.2.5 Undangan anggota perusahaan dan RFIN-B
 
-Company Super Admin memulai proses dengan menambahkan **calon anggota/individu terkait (invitee)** ke daftar undangan perusahaan, kemudian menetapkan konfigurasi akses orang tersebut. Istilah invitee ini tidak sama dengan **Orang Terkait** dalam arti beneficial owner/pemilik/pengendali perusahaan pada glossary.
+Company Super Admin memulai proses dengan menambahkan **calon anggota (Pihak Terkait/Invitee)** ke daftar undangan perusahaan, kemudian menetapkan konfigurasi akses orang tersebut. Istilah Pihak Terkait/Invitee ini tidak sama dengan **Orang Terkait** dalam arti beneficial owner/pemilik/pengendali perusahaan pada glossary, dan belum menjadi Company Membership sampai proses redemption selesai.
 
 Alur normatif:
 1. Company Super Admin membuat draft undangan dengan identitas tujuan yang dapat dihubungi (email wajib untuk pengiriman; nama tampilan dan nomor telepon opsional), tenant tujuan, serta catatan/employee_number bila memang diperlukan. Email tujuan dinormalisasi dan menjadi binding undangan; employee_number bukan login credential.
@@ -1113,16 +1113,15 @@ Sebelum Workspace dinyatakan siap:
 
 ### 16.10 Status keputusan dan hal yang belum menjadi kontrak final
 
-Isi menu dan widget di bagian ini adalah target arsitektur. Hal-hal berikut belum boleh diasumsikan final hanya berdasarkan rancangan UI:
-- Nama final seluruh persona, role, dan permission serta kombinasi default-nya.
-- Permission/action matrix terperinci per modul dan per operasi CRUD/review/approve/sign.
+Isi menu dan widget di bagian ini adalah target arsitektur. Keputusan normatif berikut sudah ditetapkan pada Bagian 17–20 dan tidak boleh dianggap masih terbuka: kebijakan A2F/MFA opsional tenant, lifecycle provisioning dan RFIN-B, baseline permission/action matrix, kontrak workflow dan SLA default, serta lifecycle Personal Workspace. Hal yang masih memerlukan spesifikasi teknis sebelum implementasi:
+- Nama final seluruh persona dan role preset serta kombinasi default-nya; permission baseline dan aksi domain tetap mengikuti Bagian 18.
+- Mapping permission ke setiap tabel/API/RPC aktual, schema database, payload/error schema, dan strategi cache.
 - Widget/dashboard per paket atau lisensi.
-- Fitur personal seperti planning, finance, quota, backup, retention, export, dan recovery beserta kebijakannya.
-- Struktur API/RPC, nama tabel final, payload/error schema, dan strategi cache.
-- Kebijakan delegasi administratif dan pengecualian ACL.
-- Acceptance threshold operasional, SLA default, dan metrik Company Readiness.
+- Struktur API/RPC final dan migration plan berdasarkan audit implementasi terkini.
+- Kebijakan delegasi administratif di luar delegasi workflow dan pengecualian ACL.
+- Acceptance threshold operasional dan metrik Company Readiness.
 
-Keputusan tersebut harus dituangkan pada katalog permission, frontend-backend contract, database mapping, RLS/authorization matrix, dan test matrix sebelum implementasi.
+Keputusan teknis tersebut harus dituangkan pada katalog permission, frontend-backend contract, database mapping, RLS/authorization matrix, dan test matrix sebelum implementasi.
 
 
 ## 17. Autentikasi, A2F/MFA, dan provisioning Company Super Admin
