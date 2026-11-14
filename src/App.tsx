@@ -11,7 +11,7 @@ import { VerificationPortal } from './components/VerificationPortal';
 import { SettingsView } from './components/SettingsView';
 import { ProjectControlView } from './components/ProjectControlView';
 import { OperationsHub } from './components/OperationsHub';
-import { PublicDocumentVerify } from './components/PublicDocumentVerify';
+import { PrivateDocumentVerify } from './components/PrivateDocumentVerify';
 import { ItemBarang, JenisMutasiBarang, JenisMutasiKas } from './types';
 import { AuthGate } from './components/AuthGate';
 import { WorkspaceCenter } from './components/WorkspaceCenter';
@@ -36,4 +36,4 @@ const MainApp:React.FC=()=>{
  {currentView!=='stock-mutations'&&<StockMutationView isModalOpen={isStockModalOpen} setIsModalOpen={setIsStockModalOpen} preselectedItem={preselectedStockItem} preselectedType={preselectedStockType} modalOnly/>}
  {currentView!=='cashflow'&&<CashflowView isModalOpen={isCashModalOpen} setIsModalOpen={setIsCashModalOpen} defaultType={preselectedCashType} modalOnly/>}</div>;
 };
-export default function App(){if(window.location.pathname==='/verify')return <PublicDocumentVerify/>;return <AuthGate><AppProvider><MainApp/></AppProvider></AuthGate>;}
+export default function App(){if(window.location.pathname==='/verify')return <AuthGate><PrivateDocumentVerify/></AuthGate>;return <AuthGate><AppProvider><MainApp/></AppProvider></AuthGate>;}
