@@ -834,6 +834,16 @@ Rute UI berikut hanya rekomendasi, bukan kontrak URL permanen:
 - area aplikasi operasional — Company Operational Workspace sesuai persona.
 - \`/workspace/personal\` — Personal Workspace.
 
+#### 16.1.1 Workspace Switcher / Active Context Selector
+
+Navbar menyediakan dropdown pemilih konteks kerja dengan pola interaksi seperti pemilih entitas pada aplikasi administrasi multi-entitas (analogi UI: Coretax, tanpa klaim integrasi atau kesetaraan sistem). Pilihan minimal:
+- **Personal / Umum (General User Type B)** — menampilkan nama/profil pengguna dan Personal Workspace miliknya;
+- **Perusahaan** — menampilkan nama setiap Company/Tenant tempat User Identity memiliki Company Membership yang valid;
+- **Persona** — setelah perusahaan dipilih, menampilkan persona-persona yang memang ditugaskan kepada pengguna dalam tenant itu.
+
+Memilih perusahaan/persona mengganti Active Workspace Context dan memperbarui navigasi/menu/widget sesuai effective access. Dropdown tidak boleh menampilkan atau mengizinkan pemilihan perusahaan yang tidak memiliki membership sah. Berpindah konteks bukan proses signup, invitation, atau pemberian privilege. Daftar, status, dan pilihan konteks disediakan/diotorisasi server-side; pilihan UI atau localStorage hanya preferensi tampilan dan tidak pernah menjadi bukti otorisasi.
+
+
 ### 16.2 Platform Super Admin Workspace
 
 Platform Super Admin Workspace digunakan untuk administrasi platform lintas tenant sesuai kebijakan platform. Otoritas Platform Super Admin tetap terpisah dari persona operasional tenant; ketika Platform Owner bekerja dalam perusahaan sebagai persona operasional, ia tunduk pada Company Membership, persona, role, permission, authority, dan scope perusahaan tersebut.
@@ -884,6 +894,11 @@ Company Super Admin memperoleh Console untuk mengelola dan mengawasi tenantnya s
 
 Company Dashboard dapat menampilkan status profil, total/active memberships, undangan pending, Employee Records aktif, proyek, pending approvals, ringkasan aktivitas, status dokumen, security/access alerts, dan audit terbaru sesuai hak akses.
 
+#### 16.3.0 Administrasi anggota tanpa bagan organisasi wajib
+
+Company Console mengutamakan pengelolaan anggota dan penugasan individu. Tidak ada menu atau dependensi wajib untuk membangun departemen, divisi, bagan organisasi, atau relasi atasan-bawahan. Company Super Admin mengatur setiap anggota secara langsung: persona, role/permission, label jabatan/approval bila dipakai, authority, project scope, dan masa berlaku. Employee Record merupakan record minimum hanya untuk use case yang membutuhkannya sebagaimana bagian 4.1; ia bukan registri seluruh tenaga kerja perusahaan. Project Membership/Scope tetap wajib ditegakkan secara terpisah dan tidak boleh ditiadakan hanya karena Org Structure Builder tidak digunakan.
+
+
 #### 16.3.1 Konfigurasi invitation dan preview akses
 
 Sebelum RFIN-B diterbitkan, Company Super Admin mengonfigurasi penerima/binding identitas, tenant tujuan, persona, minimal satu role bila akses operasional memerlukannya, project scope bila relevan, authority bila relevan, expiry, usage limit, dan ketentuan redemption. Sistem menampilkan **Effective Access Preview** yang menjelaskan hak efektif dan batasnya sebelum penerbitan.
@@ -893,6 +908,11 @@ Invitation hanya boleh memberikan hak yang berada dalam kewenangan penerbit dan 
 #### 16.3.2 Pengawasan Console
 
 Company Super Admin dapat memiliki pengawasan/read-oriented terhadap aktivitas tenant sesuai policy. Kemampuan membaca audit atau menelusuri transaksi tidak otomatis memberikan permission untuk membuat, mengubah, menghapus, memeriksa, atau menyetujui transaksi. Bila Company Super Admin juga menjalankan pekerjaan operasional, ia menggunakan persona operasional yang ditugaskan secara eksplisit; jejak audit tetap mencatat identitas asli dan konteks tindakan.
+
+#### 16.3.1a Konfigurasi RFIN-B dan preview akses
+
+Sebelum RFIN-B diterbitkan, Company Super Admin mengonfigurasi penerima/binding identitas, tenant tujuan, persona, role/permission awal yang relevan, project scope bila diperlukan, authority bila diperlukan, masa berlaku, batas penggunaan, serta ketentuan redemption. Console menampilkan **Effective Access Preview** yang menjelaskan hak efektif dan batasnya sebelum penerbitan. Redemption mengaktifkan konfigurasi yang telah diterbitkan; perubahan konfigurasi memerlukan prosedur penerbitan/perubahan yang tercatat. Invitation tidak dapat memberikan Company Super Admin kedua atau Platform Super Admin.
+
 
 ### 16.4 Company Operational Workspace — User Persona
 
@@ -936,7 +956,12 @@ Dashboard dibangun sebagai komposisi widget berbasis permission dan scope, bukan
 
 Matriks modul hanyalah template UX. Hak create/read/update/delete/review/approve/sign harus ditetapkan per permission dan diuji pada backend. Nama persona atau jabatan tidak boleh menjadi satu-satunya dasar authorization.
 
-#### 16.4.2 Workflow operasional
+##### 16.4.1a Assignment approver per dokumen dan notifikasi paralel
+
+Pembuat/pengaju dokumen dapat memilih urutan approver secara individual untuk dokumen tersebut, termasuk jumlah tahap yang sesuai kebutuhan. Template workflow dapat membantu, tetapi bukan keharusan. Ketika rangkaian disimpan/dimulai, notifikasi dikirim kepada seluruh approver yang ditetapkan secara paralel. Eksekusi keputusan tetap serial: backend hanya menerima tindakan dari approver pada step aktif; tindakan dari approver tahap lain harus ditolak. Pemilihan nama/akun oleh pembuat dokumen tidak memberi hak secara otomatis—backend wajib memvalidasi User Identity, Company Membership aktif, permission tindakan, authority/policy yang berlaku, project/resource scope, status aktif, dan tidak adanya konflik/larangan. Perubahan approver setelah workflow dimulai harus melalui prosedur terkendali dan teraudit.
+
+
+### 16.4.2 Workflow operasional
 
 Menu My Approvals hanya menampilkan item yang berhubungan dengan aktor dan konteksnya. Tindakan approve/reject/return hanya tersedia dan diterima backend ketika workflow step yang sesuai sedang aktif, aktor memenuhi membership/persona/permission/authority/scope, dan seluruh prasyarat terpenuhi. Tahap approval berjalan serial; notifikasi kepada tahap berikutnya tidak membuka tindakan sebelum gilirannya, kecuali delegasi/pengganti resmi yang tervalidasi.
 
@@ -1080,6 +1105,16 @@ Isi menu dan widget di bagian ini adalah target arsitektur. Hal-hal berikut belu
 - Acceptance threshold operasional, SLA default, dan metrik Company Readiness.
 
 Keputusan tersebut harus dituangkan pada katalog permission, frontend-backend contract, database mapping, RLS/authorization matrix, dan test matrix sebelum implementasi.
+
+### Versi 2.5 — 2026-11-14
+- Memperjelas Company Identity Registration berbasis nama perusahaan, NPWP, business email, identitas pemohon, dan pernyataan kebenaran; membedakan deklarasi/pemeriksaan format dari verifikasi legal independen, serta menegaskan ProyekCair bukan otoritas pemerintah.
+- Menambahkan Workspace Switcher di Navbar untuk Personal/Umum, daftar perusahaan yang memiliki membership sah, dan persona yang ditugaskan; server-side context tetap menjadi sumber otorisasi.
+- Menetapkan pendekatan Company Console berbasis penugasan individu dan menghapus Org Structure Builder/departemen/divisi/bagan organisasi sebagai kebutuhan wajib; Employee Record hanya untuk kebutuhan operasional tertentu dan Project Membership/Scope tetap wajib.
+- Menegaskan label jabatan/approval level merupakan preset/atribut deskriptif yang dapat disesuaikan perusahaan, bukan pemberi permission atau authority otomatis.
+- Memperjelas bahwa seluruh approver menerima notifikasi secara paralel, sedangkan eksekusi approve/reject/return tetap serial dan hanya step aktif yang dapat bertindak; pembuat dokumen dapat memilih urutan approver per dokumen dengan validasi backend.
+- Menyelaraskan penunjukan final signatory/TTE/QR: perusahaan bertanggung jawab atas verifikasi dan pemilihan internal; syarat platform adalah User Identity terautentikasi dan Company Membership aktif yang didaftarkan Company Super Admin. Tidak ada persyaratan jabatan/senioritas atau KTP/NIK/KYC independen oleh ProyekCair.
+- Menegaskan kembali TTE/QR privat, non-publik, dan batas akses tenant; tidak mengubah keputusan tentang approval serial, notifikasi paralel, atau akses scan/verifikasi privat.
+
 
 ## 17. Changelog
 
