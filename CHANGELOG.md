@@ -58,6 +58,17 @@ The project follows the business and security decisions in [USERS_SSOT.md](docs/
 - Latest production deployment for commit 0d520cb447e978deb2bf71610a1c136e41fdd8a6 reported READY.
 - No app feature code, production operational data, or canonical IDs were changed in this dependency correction.
 
+### 2026-11-14 20:24 WIB — Final verification after private QR UI changes
+
+- Clean npm install completed in an isolated Node 24 Vercel Sandbox (246 packages).
+- npm run build passed: tsc --noEmit passed and Vite 8.3.8 production build transformed 1,951 modules.
+- Existing Vite >500 kB chunk-size warning remains; no TypeScript or bundling error.
+- Final Supabase smoke checks passed: 16 operational tables RLS-enabled, 80 restrictive project-scope policies, 8 parent-scope triggers, 76 active permission catalog entries, and the project-scope gate remains OFF.
+- Anonymous QR/database checks passed: anon cannot execute the QR RPC, select the QR view, or SELECT/INSERT documents and signatures. Authenticated invocation without auth.uid returns no records. A positive end-to-end QR verification remains pending a real Project, document, and assigned QR permissions.
+- Current data counts are unchanged: companies=0, requests=0, memberships=0, projects=0, client relationships=0, documents=0, signatures=0, audit_logs=1,107. No dummy data was added.
+- The repo still has no package-lock.json; deterministic npm lockfile generation remains a follow-up.
+- The production scope gate remains OFF; the activation readiness blockers are unchanged.
+
 ### Implemented directly on the live Supabase project
 
 No Supabase staging branch was created. The user explicitly requested direct remediation without a staging branch. The following database migrations were applied to project `sjwheagxwpnqckmqxyme` and verified in the live migration history:
