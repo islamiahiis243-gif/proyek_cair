@@ -15,6 +15,7 @@ No Supabase staging branch was created. The user explicitly requested direct rem
 - `20261114120248_harden_company_and_project_rpc_wrappers`
 - `20261114120315_enforce_company_project_workspace_integrity`
 - `20261114120617_fix_company_review_and_claim_semantics`
+- `20261114120901_complete_npwp_constraints_and_project_client_writes`
 
 ### Added / Changed
 
@@ -36,7 +37,7 @@ No Supabase staging branch was created. The user explicitly requested direct rem
 
 3. **Canonical Project Registry and permission scope foundation**
    - Added `projects`, `project_client_relationships`, `project_memberships`, and `project_membership_permissions`.
-   - Added RLS to all four registry/relationship/membership tables.
+   - Added RLS to all four registry/relationship/membership tables; Company Super Admin client-relationship CRUD is enabled through the table's RLS policy.
    - Project creation and membership assignment use guarded RPCs; exposed PostgREST wrappers are `SECURITY INVOKER`, while privileged implementation functions remain in the non-exposed `private` schema.
    - Composite foreign keys enforce workspace/company membership consistency and project/workspace consistency.
    - Added nullable paired `workspace_id` and `project_id` columns plus indexes and integrity constraints to 16 legacy operational tables: `project_control`, BOQ, schedules, inventory, cash, progress, safety, media, documents/signatures, attachments, and personnel.
@@ -49,7 +50,7 @@ No Supabase staging branch was created. The user explicitly requested direct rem
 
 ### Verification
 
-- All five migrations appear in the live Supabase migration history.
+- All six migrations appear in the live Supabase migration history.
 - Platform review private implementation is executable only through the guarded Platform Super Admin path; the permission grant and wrapper were verified.
 - NPWP encryption/decryption round-trip test passed using synthetic test digits; normalization test returned 15 digits.
 - Vault master-key presence verified without exposing the key.
