@@ -55,6 +55,7 @@ The following production migrations were applied directly; no Supabase staging b
 - `20261114120248_harden_company_and_project_rpc_wrappers`
 - `20261114120315_enforce_company_project_workspace_integrity`
 - `20261114120617_fix_company_review_and_claim_semantics`
+- `20261114120901_complete_npwp_constraints_and_project_client_writes`
 
 Implemented:
 - Registration RPC requires NPWP and a separately designated Company Super Admin email.
@@ -71,7 +72,7 @@ Verification passed:
 - Vault key presence without revealing its value.
 - Sensitive-column privilege checks.
 - Review implementation execute privilege and invoker wrapper checks.
-- Live migration history contains all five migrations.
+- Live migration history contains all six migrations.
 
 Operational note: document Vault key backup/recovery, rotation, and incident-response procedures before collecting real company NPWP at scale. Format validation does not constitute tax-authority validation or independent legal verification.
 
@@ -83,7 +84,7 @@ Added:
 - `project_memberships`
 - `project_membership_permissions`
 
-RLS is enabled on all four registry tables. Guarded RPCs require active Company Super Admin authority for project creation and membership assignment. Composite foreign keys enforce Company Workspace and project/workspace consistency.
+RLS is enabled on all four registry tables. Guarded RPCs require active Company Super Admin authority for project creation and membership assignment. Company Super Admin client-relationship CRUD is enabled through its RLS policy. Composite foreign keys enforce Company Workspace and project/workspace consistency.
 
 Nullable paired `workspace_id` and `project_id` columns, indexes, and integrity constraints were added to 16 operational tables: `project_control`, BOQ sections/items/additions, schedules, inventory, cash, progress, safety, media, documents/signatures, attachments, and project personnel.
 
@@ -96,7 +97,7 @@ Client relationships intentionally do not reference `companies` or Company Membe
 - Re-read the uploaded implementation plan and retained the clarified ownership model: Proyek Cair is the platform, UDU is the project, CV Menara Megah is the tenant, and PT IMK is the client.
 - Re-inspected the live schema, onboarding functions, RLS, and data counts.
 - Created the 1,440-row legacy mapping ledger.
-- Applied and verified five production database migrations without creating a staging branch.
+- Applied and verified six production database migrations without creating a staging branch.
 - Updated Workspace Center to collect NPWP and the designated claimant email, display masked NPWP in the review queue, use the new application lifecycle, and issue RFIN-A only to the reserved seat email.
 - Updated CHANGELOG.md with implementation and remaining gates.
 - Latest Vercel production deployment for the updated main commit reports READY.
