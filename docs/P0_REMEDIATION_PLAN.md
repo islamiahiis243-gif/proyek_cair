@@ -3,7 +3,7 @@
 - **Project:** UDU / Proyek Cair
 - **Status:** Remediation design; belum merupakan persetujuan eksekusi migrasi produksi
 - **Tanggal:** 2026-11-14
-- **Baseline SSOT:** [USERS_SSOT.md v3.0](./USERS_SSOT.md)
+- **Baseline SSOT:** [USERS_SSOT.md v3.1](./USERS_SSOT.md)
 - **Tujuan:** Menutup risiko keamanan P0 sebelum tenant cutover dan sebelum perubahan database produksi.
 
 > **Batas dokumen.** Dokumen ini adalah rencana teknis dan matriks pengujian. Pembuatan dokumen ini tidak menjalankan perubahan pada aplikasi, Supabase, storage, maupun deployment. Temuan audit adalah snapshot dan wajib diverifikasi ulang terhadap branch, migration, schema, policy, function grants, dan data terkini tepat sebelum implementasi.
@@ -23,10 +23,12 @@ SSOT v3.0 adalah sumber kebenaran untuk identity, company/tenant, membership, pe
 ## 2. Prinsip arsitektur wajib
 
 - RLS adalah batas keamanan data di database; UI hiding dan localStorage bukan kontrol akses.
-- Setiap record operasional harus dapat ditautkan ke tenant/workspace dan project scope yang benar.
+- Setiap record operasional harus dapat ditautkan ke tenant/workspace dan project scope yang benar. Untuk proyek UDU, tenant pemilik adalah CV Menara Megah; PT IMK adalah client dan bukan tenant. Proyek Cair adalah nama platform.
 - Server selalu memvalidasi ulang akses; jangan mempercayai `workspace_id`, `project_id`, role, persona, atau permission yang dikirim client tanpa pemeriksaan.
 - Project Membership/Scope adalah batas keamanan tersendiri dan tidak boleh disimpulkan hanya dari Company Membership.
 - Personal Workspace tidak otomatis memberi Company Membership.
+- Company Workspace dimiliki satu tenant; Company Super Admin tenant mengatur hak view/read, CRUD, workflow/review/approval, TTE/QR signing, dan QR scan/verification per anggota, modul, dokumen, dan project scope.
+- Dalam konteks UDU: CV Menara Megah adalah tenant; UDU adalah project; PT IMK adalah client. Atribut item tanggungan/pasokan IMK tidak mengubah tenant scope.
 - Platform Owner tidak otomatis menjadi anggota tenant dan tidak boleh memperoleh akses data tenant hanya karena status platform.
 - Hindari backfill atau pemetaan otomatis atas data historis tanpa bukti kepemilikan yang dapat diverifikasi.
 - Untuk Supabase, jangan mengandalkan session variable PostgreSQL yang diasumsikan menetap lintas request. Kirim scope pada setiap RPC dan validasi terhadap auth.uid() serta data membership; RLS tetap memeriksa setiap row.
@@ -405,4 +407,4 @@ Temuan tersebut berasal dari audit implementasi terdahulu dan tidak boleh diperl
 
 ## 15. Pre-migration ownership mapping gate
 
-Sebelum migration SQL pertama untuk tenant/project isolation, gunakan [Project Ownership Mapping & Schema Gap Specification](./PROJECT_OWNERSHIP_MAPPING_SCHEMA_GAP.md). Dokumen tersebut memetakan seluruh tabel legacy, parent-scope invariants, permission baseline SSOT, row-count snapshot, ownership yang belum terselesaikan, dan release gate. **Migration backfill tetap diblokir sampai workspace owner dan canonical project registry disetujui.**
+Sebelum migration SQL pertama untuk tenant/project isolation, gunakan [Project Ownership Mapping & Schema Gap Specification](./PROJECT_OWNERSHIP_MAPPING_SCHEMA_GAP.md). Dokumen tersebut memetakan seluruh tabel legacy, parent-scope invariants, permission baseline SSOT, row-count snapshot, keputusan bisnis terbaru (tenant CV Menara Megah, project UDU, client PT IMK), schema gap, dan release gate. **Business ownership telah diputuskan; migration backfill tetap diblokir sampai Company Workspace diprovisioning, canonical project registry/ID dan mapping ledger disetujui.**
