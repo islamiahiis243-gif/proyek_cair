@@ -14,6 +14,7 @@ No Supabase staging branch was created. The user explicitly requested direct rem
 - `20261114120137_company_super_admin_designation_and_sensitive_column_acl`
 - `20261114120248_harden_company_and_project_rpc_wrappers`
 - `20261114120315_enforce_company_project_workspace_integrity`
+- `20261114120617_fix_company_review_and_claim_semantics`
 
 ### Added / Changed
 
@@ -29,7 +30,7 @@ No Supabase staging branch was created. The user explicitly requested direct rem
    - Application lifecycle is now `PENDING → ACCEPTED | REJECTED`.
    - Acceptance creates a Company in `CLAIM_PENDING`, a Company Workspace in `CLAIM_PENDING`, and one reserved `UNCLAIMED` Company Super Admin seat.
    - RFIN-A issuance is restricted to the reserved claimant email and an unclaimed seat.
-   - RFIN-A redemption atomically creates the active Company Super Admin membership, claims the seat, and activates the Company and Workspace.
+   - RFIN-A redemption atomically creates the active Company Super Admin membership, claims the seat, and activates the Company and Workspace. It does not mark the company as legally verified; legacy `verified_at` / `verified_by` remain unset.
    - A partial unique index prevents more than one active Company Super Admin membership per Company.
    - Existing RFIN-B activation is limited to already-active Companies.
 
@@ -48,7 +49,8 @@ No Supabase staging branch was created. The user explicitly requested direct rem
 
 ### Verification
 
-- All four migrations appear in the live Supabase migration history.
+- All five migrations appear in the live Supabase migration history.
+- Platform review private implementation is executable only through the guarded Platform Super Admin path; the permission grant and wrapper were verified.
 - NPWP encryption/decryption round-trip test passed using synthetic test digits; normalization test returned 15 digits.
 - Vault master-key presence verified without exposing the key.
 - NPWP ciphertext is not selectable by the `authenticated` role in either applications or companies.
