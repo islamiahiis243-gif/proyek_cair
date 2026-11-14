@@ -37,7 +37,7 @@ Karena itu:
 | Live Supabase schema inventory, project `sjwheagxwpnqckmqxyme`, 2026-11-14 | Nama tabel, kolom, PK/FK, RLS enabled, row counts | Snapshot bisa berubah; bukan pengganti recheck sebelum migration |
 | Live read-only count/group queries, 2026-11-14 | Row counts dan distribusi `audit_logs`, `project_personnel`, `boq_items` | Tidak membuktikan tenant owner |
 | `docs/ARCHITECTURE_AUDIT_AND_MIGRATION_PLAN.md` | Tidak ada pemindahan data operasional; BOQ/audit harus dipertahankan; legacy project masih belum ditetapkan workspace-nya | Snapshot dokumen 2026-11-13; beberapa jumlah sudah berubah |
-| `docs/WORKSPACE_PHASE_2_3_IMPLEMENTATION.md` | Personal/Company foundation, RFIN, batas legacy; CV Menara Megah bukan otomatis Company Workspace | Dokumen implementasi tidak menentukan owner workspace legacy |
+| `docs/WORKSPACE_PHASE_2_3_IMPLEMENTATION.md` | Personal/Company foundation, RFIN, dan batas data legacy; klarifikasi 2026-11-14 menetapkan CV Menara Megah sebagai tenant UDU dan PT IMK sebagai client | Snapshot implementasi belum membuktikan Company Workspace sudah diprovisioning |
 | `docs/USERS_SSOT.md` v3.0 | Tenant, membership, project scope, permission model, permission baseline per modul | Menentukan target authorization, bukan bukti data historis |
 | `implementation_plan.md` yang diunggah | Kebutuhan domain: BOQ, barang, progres, kas, K3, dokumen, roster, offline cache | Beberapa konsepnya adalah target produk, bukan nama/kolom schema aktual; keputusan QR publik bertentangan dengan SSOT dan tidak diikuti |
 
@@ -139,9 +139,9 @@ Status:
 
 | Tabel | Workspace target | Project target | Permission baseline SSOT | Schema gap / mapping rule | Status |
 |---|---|---|---|---|---|
-| `project_control` | UNRESOLVED / LEGACY_UNASSIGNED | Project UDU (business identity confirmed; canonical UUID pending) | `project.read`, `project.update`, `project.close` | Tidak ada workspace/project master FK. Putuskan apakah tabel ini tetap project settings atau dinormalisasi ke project registry; jangan menambah FK sebelum model final | PROJECT-CANDIDATE |
-| `boq_sections` | UNRESOLVED / LEGACY_UNASSIGNED | UDU melalui satu legacy BOQ set | `boq.read`, `boq.create`, `boq.update`, `boq.approve`, `boq.revision` | Tambahkan scope pada BOQ root/project, atau relasi eksplisit ke project; parent-child section harus satu project | PROJECT-CANDIDATE |
-| `boq_items` | UNRESOLVED / LEGACY_UNASSIGNED | UDU; 280 row | `boq.read`, `boq.create`, `boq.update`, `boq.approve`, `boq.addition.create`, `boq.revision` | Tidak ada scope column. Validasi `parent_section_id` dalam project yang sama; jangan menyimpulkan tenant dari category, source_sheet, atau owner | PROJECT-CANDIDATE |
+| `project_control` | TARGET: CV MENARA MEGAH / AWAITING_PROVISIONING | Project UDU (business identity confirmed; canonical UUID pending) | `project.read`, `project.update`, `project.close` | Tidak ada workspace/project master FK. Putuskan apakah tabel ini tetap project settings atau dinormalisasi ke project registry; jangan menambah FK sebelum model final | PROJECT-CANDIDATE |
+| `boq_sections` | TARGET: CV MENARA MEGAH / AWAITING_PROVISIONING | UDU melalui satu legacy BOQ set | `boq.read`, `boq.create`, `boq.update`, `boq.approve`, `boq.revision` | Tambahkan scope pada BOQ root/project, atau relasi eksplisit ke project; parent-child section harus satu project | PROJECT-CANDIDATE |
+| `boq_items` | TARGET: CV MENARA MEGAH / AWAITING_PROVISIONING | UDU; 280 row | `boq.read`, `boq.create`, `boq.update`, `boq.approve`, `boq.addition.create`, `boq.revision` | Tidak ada scope column. Validasi `parent_section_id` dalam project yang sama; jangan menyimpulkan tenant dari category, source_sheet, atau owner | PROJECT-CANDIDATE |
 | `boq_additions` | Inherit dari BOQ item | Inherit dari `item_id → boq_items` | `boq.addition.create`, `boq.read`, `boq.approve` | Composite tenant/project consistency terhadap BOQ item; saat ini 0 row | INHERIT-PARENT |
 | `item_schedules` | Inherit dari BOQ item | Inherit dari `item_id → boq_items` | `procurement.read`, `procurement.update`; permission schedule-specific perlu diputuskan bila diperlukan | Tidak ada scope sendiri; pastikan schedule hanya dapat mengubah item pada project yang sama; saat ini 0 row | INHERIT-PARENT |
 
@@ -149,20 +149,20 @@ Status:
 
 | Tabel | Workspace target | Project target | Permission baseline SSOT | Schema gap / mapping rule | Status |
 |---|---|---|---|---|---|
-| `inventory_locations` | UNRESOLVED / LEGACY_UNASSIGNED | UDU (project-level) | `inventory.read`, `inventory.count`, `inventory.movement.create` | Perlu scope langsung karena tidak memiliki project parent; unique `name` global saat ini mungkin harus menjadi unique per project/workspace | PROJECT-LEVEL / EMPTY-FUTURE |
+| `inventory_locations` | TARGET: CV MENARA MEGAH / AWAITING_PROVISIONING | UDU (project-level) | `inventory.read`, `inventory.count`, `inventory.movement.create` | Perlu scope langsung karena tidak memiliki project parent; unique `name` global saat ini mungkin harus menjadi unique per project/workspace | PROJECT-LEVEL / EMPTY-FUTURE |
 | `inventory_transactions` | Inherit from BOQ item and location; both must agree | Inherit from `item_id`; source/destination locations must resolve to same project | `inventory.read`, `inventory.movement.create`, `inventory.movement.review`, `inventory.movement.approve`, `inventory.movement.reverse` | Tidak ada scope. Enforce parent scope consistency untuk item, source/destination location, addition, dan reversal; jangan percaya `owner_type` sebagai tenant | INHERIT-PARENT / EMPTY-FUTURE |
 | `inventory_transaction_reversals` | Inherit from original transaction | Inherit from original/reversal transaction; both must match | `inventory.movement.reverse`, `inventory.read` | Kedua FK transaksi harus satu project/workspace; append-only/reversal semantics dipertahankan | INHERIT-PARENT / EMPTY-FUTURE |
-| `cash_transactions` | UNRESOLVED / LEGACY_UNASSIGNED | Proyek Cair (project-level) | `cash.read`, `cash.transaction.create`, `cash.transaction.submit`, `cash.transaction.review`, `cash.transaction.approve`, `cash.transaction.void`, `cash.transaction.reverse`, `cash.export` | Tidak ada project FK atau scope; setiap row baru harus terikat ke project. Actor `created_by` tidak menentukan tenant | PROJECT-LEVEL / EMPTY-FUTURE |
-| `progress_logs` | UNRESOLVED / LEGACY_UNASSIGNED | Proyek Cair (project-level) | `progress.read`, `progress.create`, `progress.update`, `progress.submit`, `progress.review`, `progress.verify`, `progress.approve`, `progress.return` | Tidak ada scope; `work_package/client_key` bukan pengganti project FK | PROJECT-LEVEL / EMPTY-FUTURE |
-| `safety_reports` | UNRESOLVED / LEGACY_UNASSIGNED | Proyek Cair (project-level) | `k3.read`, `k3.report.create`, `k3.report.update`, `k3.report.submit`, `k3.report.review`, `k3.report.close`, `k3.incident.manage` | Tidak ada scope; reporter/reviewer bukan tenant membership | PROJECT-LEVEL / EMPTY-FUTURE |
+| `cash_transactions` | TARGET: CV MENARA MEGAH / AWAITING_PROVISIONING | UDU (project-level) | `cash.read`, `cash.transaction.create`, `cash.transaction.submit`, `cash.transaction.review`, `cash.transaction.approve`, `cash.transaction.void`, `cash.transaction.reverse`, `cash.export` | Tidak ada project FK atau scope; setiap row baru harus terikat ke project. Actor `created_by` tidak menentukan tenant | PROJECT-LEVEL / EMPTY-FUTURE |
+| `progress_logs` | TARGET: CV MENARA MEGAH / AWAITING_PROVISIONING | UDU (project-level) | `progress.read`, `progress.create`, `progress.update`, `progress.submit`, `progress.review`, `progress.verify`, `progress.approve`, `progress.return` | Tidak ada scope; `work_package/client_key` bukan pengganti project FK | PROJECT-LEVEL / EMPTY-FUTURE |
+| `safety_reports` | TARGET: CV MENARA MEGAH / AWAITING_PROVISIONING | UDU (project-level) | `k3.read`, `k3.report.create`, `k3.report.update`, `k3.report.submit`, `k3.report.review`, `k3.report.close`, `k3.incident.manage` | Tidak ada scope; reporter/reviewer bukan tenant membership | PROJECT-LEVEL / EMPTY-FUTURE |
 | `project_media` | Inherit from linked progress/safety record; otherwise project-level | Inherit from `linked_progress_id` / `linked_safety_id`; if both null, explicit project scope required | Permission parent + `progress.read` / `k3.read`; upload permission harus diselaraskan | Dua parent reference dapat menyebabkan cross-project link; constraint/check harus memastikan semua parent pada project sama | INHERIT-PARENT / EMPTY-FUTURE |
 
 ### 5.3 Personnel, documents, attachments, audit
 
 | Tabel | Workspace target | Project target | Permission baseline SSOT | Schema gap / mapping rule | Status |
 |---|---|---|---|---|---|
-| `project_personnel` | UNRESOLVED / LEGACY_UNASSIGNED | UDU roster | `project.read`, `project.assign`; `employee.read/create/update/manage` hanya jika Employee Record dipakai | 13 row adalah roster operasional, bukan User Identity, Company Membership, Persona, Role, atau Project Membership. `linked_user_id` harus diverifikasi satu per satu; jangan membuat Auth user otomatis | PROJECT-CANDIDATE |
-| `documents` | UNRESOLVED / LEGACY_UNASSIGNED | UDU (document scope) | `document.read/create/update/submit/review/approve/issue/sign/void/replace`, `document.qr.scan`, `document.qr.verify` | Tidak ada tenant/project FK. Scope harus mengikuti project/resource yang dokumen wakili; QR/TTE privat sesuai SSOT v3.0 | PROJECT-LEVEL / EMPTY-FUTURE |
+| `project_personnel` | TARGET: CV MENARA MEGAH / AWAITING_PROVISIONING | UDU roster | `project.read`, `project.assign`; `employee.read/create/update/manage` hanya jika Employee Record dipakai | 13 row adalah roster operasional, bukan User Identity, Company Membership, Persona, Role, atau Project Membership. `linked_user_id` harus diverifikasi satu per satu; jangan membuat Auth user otomatis | PROJECT-CANDIDATE |
+| `documents` | TARGET: CV MENARA MEGAH / AWAITING_PROVISIONING | UDU (document scope) | `document.read/create/update/submit/review/approve/issue/sign/void/replace`, `document.qr.scan`, `document.qr.verify` | Tidak ada tenant/project FK. Scope harus mengikuti project/resource yang dokumen wakili; QR/TTE privat sesuai SSOT v3.1 | PROJECT-LEVEL / EMPTY-FUTURE |
 | `document_signatures` | Inherit from document | Inherit from `document_id → documents` | `document.read`, `document.sign`, `document.approve` sesuai workflow | Signer identity/authority/appointment harus divalidasi terpisah; signature scope selalu sama dengan parent document | INHERIT-PARENT / EMPTY-FUTURE |
 | `transaction_attachments` | Inherit from referenced transaction | Inherit from parent transaction resolved by `transaction_kind + transaction_id` | Permission parent resource + `document.read`/download scope yang sesuai | Polymorphic FK saat ini tidak menjaga referential integrity atau tenant consistency; buat allowlist transaction_kind dan resolver parent yang memvalidasi scope | INHERIT-PARENT / EMPTY-FUTURE |
 | `audit_logs` | Inherit from target resource for tenant event; platform/identity event remains separate | Inherit from target project when entity is project-scoped | `audit.read`, `audit.export` | 1,106 `boq_items` events harus resolve melalui `entity_id → boq_items.id`; 1 `profile` event tidak boleh dipaksa ke project. Orphan/unknown entity harus quarantine/review. Audit append-only | MIXED / PARTIAL RESOLUTION |
@@ -184,7 +184,7 @@ Status:
 
 ## 6. Permission mapping rules
 
-Permission names di atas mengikuti baseline matriks SSOT v3.0 §18.2. Matriks ini adalah permission catalog baseline; hak efektif tetap memerlukan kombinasi:
+Permission names di atas mengikuti baseline matriks SSOT v3.1 §18.2. Matriks ini adalah permission catalog baseline; hak efektif tetap memerlukan kombinasi:
 - active Company Membership (untuk Company Workspace),
 - project membership/scope,
 - persona dan role assignment yang sah,
@@ -259,7 +259,7 @@ Jangan mengubah constraint sebelum business rule final:
 ### 8.2 No silent reassignment
 
 - Jangan memindahkan 280 BOQ item ke salah satu dari 3 Personal Workspace.
-- Jangan membuat Company Workspace untuk PT IMK atau CV Menara Megah sebagai efek samping migration.
+- Jangan membuat Company Workspace untuk PT IMK. Company Workspace CV Menara Megah harus dibuat melalui Company onboarding/provisioning resmi, bukan sebagai efek samping migration.
 - Jangan membuat Company Membership dari `project_personnel`.
 - Jangan menyalin `company`, `job_title`, `project_role`, `authority_level` menjadi Persona/Role/Authority tanpa review assignment per user.
 - Jangan menandai BOQ item sebagai milik IMK/kontraktor berdasarkan `category` atau nama deskripsi. Jika owner/supply responsibility perlu dipertahankan, itu domain attribute tersendiri, bukan tenant.
@@ -272,7 +272,7 @@ Sebelum migration, siapkan mapping ledger terkontrol (CSV atau staging table non
 `source_table`, `source_pk`, `legacy_project_key`, `target_project_key`, `target_workspace_id`, `mapping_method`, `evidence_reference`, `confidence`, `reviewed_by`, `reviewed_at`, `status`, `exception_reason`.
 
 Rules:
-- `target_workspace_id` tetap NULL/UNRESOLVED sampai disetujui.
+- `target_workspace_id` tetap NULL sampai Company Workspace Menara Megah diprovisioning dan ID tervalidasi.
 - Setiap mapping row harus dapat ditelusuri ke source evidence.
 - Parent-derived mapping harus dicek konsistensinya.
 - Row tanpa parent yang valid, orphan audit event, unknown entity type, atau conflicting evidence masuk quarantine.
@@ -324,7 +324,7 @@ Migration SQL pertama yang menyentuh operational legacy data **BLOCKED** sampai 
 ### 10.1 Release gate
 
 Sebelum menulis SQL migration:
-- [ ] Workspace owner telah disetujui.
+- [ ] Company/Tenant CV Menara Megah dan Company Workspace telah diprovisioning secara resmi; target IDs tervalidasi.
 - [ ] Canonical project registry telah diputuskan.
 - [ ] Semua row legacy telah memiliki mapping atau quarantine status.
 - [ ] 13 personnel roster tidak disamakan dengan Auth/Company Membership.
