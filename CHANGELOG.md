@@ -34,6 +34,15 @@ The project follows the business and security decisions in [USERS_SSOT.md](docs/
 - Timestamp uses project local time (WIB, UTC+7).
 
 
+### 2026-11-14 20:11 WIB — Dependency correction and production build verification
+
+- The first clean install exposed an existing dependency conflict: Vite 8.3.8 requires esbuild ^0.27.0 or ^0.28.0, while package.json previously allowed esbuild ^0.25.0.
+- Updated package.json esbuild devDependency to ^0.28.0; npm install then completed successfully in an isolated Vercel Sandbox.
+- npm run build passed, including tsc --noEmit and Vite production bundling (1,951 modules). A pre-existing large-chunk warning (>500 kB) remains.
+- The repository had no package-lock.json; the sandbox install resolved from package.json. A lockfile is still recommended for deterministic installs.
+- Latest production deployment for commit 0d520cb447e978deb2bf71610a1c136e41fdd8a6 reported READY.
+- No app feature code, production operational data, or canonical IDs were changed in this dependency correction.
+
 ### Implemented directly on the live Supabase project
 
 No Supabase staging branch was created. The user explicitly requested direct remediation without a staging branch. The following database migrations were applied to project `sjwheagxwpnqckmqxyme` and verified in the live migration history:
