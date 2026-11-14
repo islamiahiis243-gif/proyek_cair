@@ -1,6 +1,6 @@
 # UDU Tenant / Project Cutover Readiness
 
-**Snapshot:** Supabase project sjwheagxwpnqckmqxyme, updated 2026-11-14  
+**Snapshot:** Supabase project sjwheagxwpnqckmqxyme, updated 2026-11-14 19:22 WIB
 **Business baseline:** USERS_SSOT.md v3.1  
 **Status:** ONBOARDING + PROJECT REGISTRY FOUNDATION APPLIED DIRECTLY; TENANT PROVISIONING AND LEGACY CUTOVER PENDING
 
@@ -76,7 +76,7 @@ Verification passed:
 - Review implementation execute privilege and invoker wrapper checks.
 - Live migration history contains all eight migrations.
 
-Operational note: document Vault key backup/recovery, rotation, and incident-response procedures before collecting real company NPWP at scale. Format validation does not constitute tax-authority validation or independent legal verification.
+Operational note: the operator procedure is documented in [NPWP_KEY_BACKUP_RECOVERY_RUNBOOK.md](NPWP_KEY_BACKUP_RECOVERY_RUNBOOK.md). The external key backup, custody verification, and recovery drill have NOT been performed; this gate remains open and real NPWP intake at scale must remain blocked. Format validation does not constitute tax-authority validation or independent legal verification.
 
 ## 4. Canonical Project Registry foundation — applied, operational cutover pending
 
@@ -102,12 +102,13 @@ Client relationships intentionally do not reference `companies` or Company Membe
 - Created the 1,440-row legacy mapping ledger.
 - Applied and verified eight production database migrations without creating a staging branch.
 - Updated Workspace Center to collect NPWP and the designated claimant email, display masked NPWP in the review queue, use the new application lifecycle, and issue RFIN-A only to the reserved seat email.
+- Added docs/NPWP_KEY_BACKUP_RECOVERY_RUNBOOK.md covering the separate Supabase Vault root key and Proyek Cair application master key, secure escrow, restore paths, rotation constraints, and incident response. This documents the procedure only; no key material was exported or backed up.
 - Updated CHANGELOG.md with implementation and remaining gates.
 - Latest Vercel production deployment for the updated main commit reports READY.
 
 ## 6. Remaining gates (ordered)
 
-1. Establish Vault key backup/recovery, rotation, and incident-response runbook before real NPWP intake at scale.
+1. Execute the documented Vault key backup procedure: export the application master key directly into external dual-custody escrow, verify retrieval without exposing it, and complete a controlled recovery drill. The runbook exists; the backup and drill remain pending.
 2. Authorized applicant submits CV Menara Megah registration in Workspace Center using its actual NPWP and designated Company Super Admin email.
 3. Platform Super Admin reviews and accepts the application.
 4. Platform Super Admin issues RFIN-A to the designated email; claimant signs in with that identity and redeems it.
